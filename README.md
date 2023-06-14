@@ -16,7 +16,9 @@ e) It supports multiple message de/encoders, including RTCM2, RTCM3, Ublox raw, 
 
 f) It supports multiple stream and multi-algorithm processing. No maximum quantity is limited. 
 
-**Authors:** Cheng Chi, 
+**Authors:** Cheng Chi, Xin Zhang, Jiahui Liu, Yulong Sun, Zihao Zhang, and Xingqun Zhan.
+
+**Contact:** chichengcn@sjtu.edu.cn
 
 **Related Papers**
 
