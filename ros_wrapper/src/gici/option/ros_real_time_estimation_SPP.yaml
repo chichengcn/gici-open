@@ -1,0 +1,100 @@
+# GICI offline pseudo-real-time SPP estimation with ROS topics as input and output
+stream:
+  streamers:
+    - streamer:
+        tag: str_ros_gnss_rov
+        type: ros
+        topic_name: /gici/gnss_rover
+        io: input
+        format: gnss_raw
+        enable_observation: true
+    - streamer:
+        tag: str_ros_gnss_eph
+        type: ros
+        topic_name: /gici/gnss_ephemeris
+        io: input
+        format: gnss_raw
+        enable_ephemeris: true
+        enable_ionosphere_parameter: true
+    - streamer:
+        tag: str_dcb_file
+        output_tags: [fmt_dcb_file]
+        type: file
+        path: <gici-root-directory>/option/CAS0MGXRAP_20221580000_01D_01D_DCB.BSX
+        enable_time_tag: false
+    - streamer:
+        tag: str_solution_file
+        input_tags: [fmt_solution_file]
+        type: file
+        path: <output-directory>/spp_solution.txt
+        enable_time_tag: false
+    - streamer:
+        tag: str_solution
+        type: ros
+        topic_name: solution
+        queue_size: 5
+        io: output
+        format: pose_stamped
+    - streamer:
+        tag: str_solution_odometry
+        type: ros
+        topic_name: solution_odometry
+        queue_size: 10
+        io: output
+        format: odometry
+        subframe_id: Body
+    - streamer:
+        tag: str_solution_path
+        type: ros
+        topic_name: solution_path
+        queue_size: 100
+        io: output
+        format: path
+
+  formators:
+    - formator:
+        io: input
+        tag: fmt_dcb_file
+        type: dcb-file
+    - formator:
+        io: output
+        tag: fmt_solution_file
+        type: nmea 
+        use_esa: true
+        talker_id: GP
+
+  replay:
+    enable: false
+
+estimate:
+- estimator:
+    tag: est_spp
+    type: spp
+    input_tags: [str_ros_gnss_rov, str_ros_gnss_eph, fmt_dcb_file]
+    str_ros_gnss_rov_roles: [rover]
+    str_ros_gnss_eph_roles: [ephemeris]
+    fmt_dcb_file_roles: [code_bias]
+    output_tags: [str_solution, str_solution_odometry, str_solution_path, fmt_solution_file]
+    output_align_tag: str_ros_gnss_rov
+    compute_covariance: false
+    spp_options:
+      estimate_velocity: false
+    gnss_estimator_base_options:
+      gnss_common:
+        min_elevation: 12.0
+        min_SNR: [35.0, 30.0]
+      use_outlier_rejection: true
+      max_pesudorange_error: 10.0
+    estimator_base_options:
+      max_iteration: 10
+      num_threads: 2
+      max_solver_time: 0.05
+      verbose_output: true
+      solver_type: dense_normal_cholesky
+      trust_region_strategy_type: levenberg_marquardt
+
+logging:
+  enable: true
+  min_log_level: 0
+  log_to_stderr: true
+  file_directory: <log-directory>

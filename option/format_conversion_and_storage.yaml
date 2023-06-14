@@ -1,0 +1,65 @@
+#Format conversion and storage configuration file
+stream:
+  streamers:
+    - streamer:
+        tag: str_gnss_rov
+        output_tags: [fmt_gnss_rov]
+        type: serial
+        port: ttyUSB0
+        baudrate: 921600
+    - streamer:
+        tag: str_camera
+        type: tcp-client
+        ip: ...
+        port: ...
+        buffer_length: 361472  # 752 * 480 + 512
+    - streamer:
+        tag: str_gnss_rov_file
+        input_tags: [fmt_gnss_rov_conversion]
+        type: file
+        path: <output-directory>/gnss_rover.bin
+    - streamer:
+        tag: str_camera_file
+        input_tags: [fmt_camera_conversion]
+        type: file
+        path: <output-directory>/camera.bin
+        buffer_length: 361472  # 752 * 480 + 512
+
+  formators:
+    - formator:
+        io: input
+        tag: fmt_gnss_rov
+        input_tags: [str_gnss_rov]
+        output_tags: [fmt_gnss_rov_conversion]
+        type: gnss-raw
+        sub_type: tersus
+    - formator:
+        io: input
+        tag: fmt_camera
+        input_tags: [str_camera]
+        output_tags: [fmt_camera_conversion]
+        type: image-pack
+    - formator:
+        io: log
+        tag: fmt_gnss_rov_conversion
+        input_tags: [fmt_gnss_rov]
+        output_tags: [str_gnss_rov_file]
+        type: gnss-rtcm-3
+    - formator:
+        io: log
+        tag: fmt_camera_conversion
+        input_tags: [fmt_camera]
+        output_tags: [str_camera_file]      
+        type: image-v4l2
+
+  replay:
+    enable: false
+
+estimate:
+
+
+logging:
+  enable: true
+  min_log_level: 1
+  log_to_stderr: true
+  file_directory: <log-directory>

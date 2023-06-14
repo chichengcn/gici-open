@@ -1,0 +1,98 @@
+# Gici board configurations
+stream:
+  streamers:
+  - streamer:
+      tag: str_gnss_rov
+      output_tags: [fmt_gnss_rov]
+      type: file
+      path: <data-directory>/gnss_rover.bin
+  - streamer:
+      tag: str_gnss_ref
+      output_tags: [fmt_gnss_ref]
+      type: file
+      path: <data-directory>/gnss_reference.bin
+  - streamer:
+      tag: str_gnss_eph
+      output_tags: [fmt_gnss_eph]
+      type: file
+      path: <data-directory>/gnss_ephemeris.bin
+  - streamer:
+      tag: str_imu
+      output_tags: [fmt_imu]
+      type: file
+      path: <data-directory>/imu.bin
+  - streamer:
+      tag: str_camera
+      output_tags: [fmt_camera]
+      type: file
+      path: <data-directory>/camera.bin
+      buffer_length: 361472  # 752 * 480 + 512 
+
+  formators:
+  - formator:
+      io: input
+      tag: fmt_gnss_rov
+      type: gnss-raw
+      sub_type: tersus
+  - formator:
+      io: input
+      tag: fmt_gnss_ref
+      type: gnss-rtcm-3
+      start_time: 2023.03.20
+  - formator:
+      io: input
+      tag: fmt_gnss_eph
+      type: gnss-rtcm-3
+      start_time: 2023.03.20
+  - formator:
+      io: input
+      tag: fmt_imu
+      type: imu-pack
+  - formator:
+      io: input
+      tag: fmt_camera
+      width: 752
+      height: 480
+      type: image-pack
+
+rosbags:
+- rosbag: 
+    tag: rosbag_gnss_rov
+    type: rosbag
+    input_tags: [fmt_gnss_rov]
+    path: <data-directory>/gnss_rover.bag
+    topic_name: /gici/gnss_rover
+    format: gnss_raw
+    enable_observation: true
+- rosbag: 
+    tag: rosbag_gnss_ref
+    type: rosbag
+    input_tags: [fmt_gnss_ref]
+    path: <data-directory>/gnss_reference.bag
+    topic_name: /gici/gnss_reference
+    format: gnss_raw
+    enable_observation: true
+    enable_antenna_position: true
+- rosbag: 
+    tag: rosbag_gnss_eph
+    type: rosbag
+    input_tags: [fmt_gnss_eph]
+    path: <data-directory>/gnss_ephemeris.bag
+    topic_name: /gici/gnss_ephemeris
+    format: gnss_raw
+    enable_ephemeris: true
+    enable_ionosphere_parameter: true
+- rosbag: 
+    tag: rosbag_imu
+    type: rosbag
+    input_tags: [fmt_imu]
+    path: <data-directory>/imu.bag
+    topic_name: /gici/imu_raw
+    format: imu
+- rosbag: 
+    tag: rosbag_camera
+    type: rosbag
+    input_tags: [fmt_camera]
+    path: <data-directory>/image.bag
+    topic_name: /gici/image_raw
+    format: image

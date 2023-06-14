@@ -1,0 +1,166 @@
+# GICI offline pseudo-real-time RTK/IMU TC estimation
+# You can uncomment the node configuration to publish related topics and observe estimation results (Build GICI in ROS wrapper).
+stream:
+  streamers:
+    - streamer:
+        tag: str_gnss_rov
+        output_tags: [fmt_gnss_rov]
+        type: file
+        path: <data-directory>/gnss_rover.bin
+    - streamer:
+        tag: str_gnss_ref
+        output_tags: [fmt_gnss_ref]
+        type: file
+        path: <data-directory>/gnss_reference.bin
+    - streamer:
+        tag: str_gnss_eph
+        output_tags: [fmt_gnss_eph]
+        type: file
+        path: <data-directory>/gnss_ephemeris.bin
+    - streamer:
+        tag: str_dcb_file
+        output_tags: [fmt_dcb_file]
+        type: file
+        path: <gici-root-directory>/option/CAS0MGXRAP_20221580000_01D_01D_DCB.BSX
+        enable_time_tag: false
+    - streamer:
+        tag: str_imu
+        output_tags: [fmt_imu]
+        type: file
+        path: <data-directory>/imu.bin
+        loop_duration: 0.001
+    - streamer:
+        tag: str_tc_solution_file
+        input_tags: [fmt_tc_solution_file]
+        type: file
+        path: <output-directory>/rtk_tc_solution.txt
+        enable_time_tag: false
+    # - streamer:
+    #     tag: str_solution
+    #     type: ros
+    #     topic_name: solution
+    #     queue_size: 5
+    #     io: output
+    #     format: pose_stamped
+    # - streamer:
+    #     tag: str_solution_odometry
+    #     type: ros
+    #     topic_name: solution_odometry
+    #     queue_size: 10
+    #     io: output
+    #     format: odometry
+    #     subframe_id: Body
+    # - streamer:
+    #     tag: str_solution_path
+    #     type: ros
+    #     topic_name: solution_path
+    #     queue_size: 100
+    #     io: output
+    #     format: path
+  
+  formators:
+    - formator:
+        io: input
+        tag: fmt_dcb_file
+        type: dcb-file
+    - formator:
+        io: input
+        tag: fmt_gnss_rov
+        type: gnss-raw
+        sub_type: tersus
+    - formator:
+        io: input
+        tag: fmt_gnss_ref
+        type: gnss-rtcm-3
+        start_time: 2023.03.20
+    - formator:
+        io: input
+        tag: fmt_gnss_eph
+        type: gnss-rtcm-3
+        start_time: 2023.03.20
+    - formator:
+        io: input
+        tag: fmt_imu
+        type: imu-pack
+    - formator:
+        io: output
+        tag: fmt_tc_solution_file
+        type: nmea 
+        use_esa: true
+        talker_id: GP
+
+
+  replay:
+    enable: true
+    speed: 0.5
+    start_offset: 10.0
+
+estimate:
+- estimator:
+    tag: est_rtk_imu_tc
+    type: rtk_imu_tc
+    input_tags: [fmt_gnss_rov, fmt_gnss_ref, fmt_gnss_eph, fmt_dcb_file, fmt_imu]
+    fmt_gnss_rov_roles: [rover]
+    fmt_gnss_ref_roles: [reference]
+    fmt_gnss_eph_roles: [ephemeris]
+    fmt_dcb_file_roles: [code_bias]
+    fmt_imu_roles: [major]
+    output_tags: [fmt_tc_solution_file]
+    # output_tags: [fmt_tc_solution_file, str_solution, str_solution_odometry, str_solution_path]
+    output_align_tag: fmt_imu
+    output_downsample_rate: 40
+    compute_covariance: true
+    rtk_imu_tc_options:
+      max_window_length: 3
+    rtk_options:
+      use_ambiguity_resolution: true
+    gnss_estimator_base_options:
+      use_outlier_rejection: true
+      reject_one_outlier_once: false
+      max_pesudorange_error: 4.0      
+      max_phaserange_error: 0.06      
+      max_doppler_error: 0.5
+      gnss_common:
+        min_elevation: 12.0           
+        min_SNR: [35.0, 30.0]
+    imu_estimator_base_options:
+      imu_parameters:
+        sigma_bg: 1.0e-3
+        sigma_ba: 1.0e-2
+        sigma_g_c: 2.6700e-04
+        sigma_a_c: 0.0112
+        sigma_gw_c: 2.0881e-06
+        sigma_aw_c: 2.7361e-04
+      body_to_imu_rotation: [-90.0, -90.0, 0.0]
+      body_to_imu_rotation_std: 5.0
+      car_motion: true
+      car_motion_min_velocity: 3.0
+      car_motion_max_anguler_velocity: 5.0
+    estimator_base_options:
+      max_iteration: 5
+      num_threads: 4
+      max_solver_time: 0.05
+      verbose_output: true
+      solver_type: dense_schur
+      trust_region_strategy_type: dogleg
+    ambiguity_resolution_options:
+      system_exclude: [R]
+      min_percentage_fixation_uwl: 1.0
+      min_percentage_fixation_wl: 0.9
+      min_percentage_fixation_nl: 0.9
+      ratio: 2.0
+    gnss_imu_initializer_options:
+      max_iteration: 30
+      num_threads: 4
+      max_solver_time: 0.5
+      gnss_extrinsics: [-0.029, 0.354, -0.042]
+      gnss_extrinsics_initial_std: [0.0, 0.0, 0.0]
+      time_window_length_slow_motion: 0.05
+      time_window_length_dynamic_motion: 0.5
+      min_acceleration: 0.5
+
+logging:
+  enable: true
+  min_log_level: 0
+  log_to_stderr: true
+  file_directory: <log-directory>

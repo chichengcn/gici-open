@@ -1,0 +1,274 @@
+# GICI offline pseudo-real-time GNSS/IMU/Camera SRR estimation
+# You can uncomment the node configuration to publish related topics and observe estimation results (Build GICI in ROS wrapper).
+stream:
+  streamers:
+    - streamer:
+        tag: str_gnss_rov
+        output_tags: [fmt_gnss_rov]
+        type: file
+        path: <data-directory>/gnss_rover.bin
+    - streamer:
+        tag: str_gnss_ref
+        output_tags: [fmt_gnss_ref]
+        type: file
+        path: <data-directory>/gnss_reference.bin
+    - streamer:
+        tag: str_gnss_eph
+        output_tags: [fmt_gnss_eph]
+        type: file
+        path: <data-directory>/gnss_ephemeris.bin
+    - streamer:
+        tag: str_dcb_file
+        output_tags: [fmt_dcb_file]
+        type: file
+        path: <gici-root-directory>/option/CAS0MGXRAP_20221580000_01D_01D_DCB.BSX
+        enable_time_tag: false
+    - streamer:
+        tag: str_imu
+        output_tags: [fmt_imu]
+        type: file
+        path: <data-directory>/imu.bin
+        loop_duration: 0.001
+    - streamer:
+        tag: str_camera
+        output_tags: [fmt_camera]
+        type: file
+        path: <data-directory>/camera.bin
+        buffer_length: 361472 # 752 * 480 + 512 
+    - streamer:
+        tag: str_rtk_solution_file
+        input_tags: [fmt_rtk_solution_file]
+        type: file
+        path: <output-directory>/rtk_solution.txt
+        enable_time_tag: false
+    - streamer:
+        tag: str_srr_solution_file
+        input_tags: [fmt_srr_solution_file]
+        type: file
+        path: <output-directory>/srr_solution.txt
+        enable_time_tag: false
+    # - streamer:
+    #     tag: str_solution
+    #     type: ros
+    #     topic_name: solution
+    #     queue_size: 5
+    #     io: output
+    #     format: pose_stamped
+    # - streamer:
+    #     tag: str_solution_odometry
+    #     type: ros
+    #     topic_name: solution_odometry
+    #     queue_size: 10
+    #     io: output
+    #     format: odometry
+    #     subframe_id: Body
+    # - streamer:
+    #     tag: str_solution_path
+    #     type: ros
+    #     topic_name: solution_path
+    #     queue_size: 100
+    #     io: output
+    #     format: path
+    # - streamer:
+    #     tag: str_featured_image
+    #     type: ros
+    #     topic_name: featured_image
+    #     queue_size: 3
+    #     io: output
+    #     format: image
+    # - streamer:
+    #     tag: str_landmarks
+    #     type: ros
+    #     topic_name: landmarks
+    #     queue_size: 3
+    #     marker_scale: 0.2
+    #     io: output
+    #     format: marker
+  
+  formators:
+    - formator:
+        io: input
+        tag: fmt_dcb_file
+        type: dcb-file
+    - formator:
+        io: input
+        tag: fmt_gnss_rov
+        type: gnss-raw
+        sub_type: tersus
+    - formator:
+        io: input
+        tag: fmt_gnss_ref
+        type: gnss-rtcm-3
+        start_time: 2023.03.20
+    - formator:
+        io: input
+        tag: fmt_gnss_eph
+        type: gnss-rtcm-3
+        start_time: 2023.03.20
+    - formator:
+        io: input
+        tag: fmt_imu
+        type: imu-pack
+    - formator:
+        io: input
+        tag: fmt_camera
+        width: 752
+        height: 480
+        type: image-pack
+    - formator:
+        io: output
+        tag: fmt_rtk_solution_file
+        type: nmea 
+        use_esa: true
+        use_esd: true
+        talker_id: GP
+    - formator:
+        io: output
+        tag: fmt_srr_solution_file
+        type: nmea 
+        use_esa: true
+        talker_id: GP
+
+
+  replay:
+    enable: true
+    speed: 0.5
+    start_offset: 10.0
+
+estimate:
+- estimator:
+    tag: est_rtk
+    type: rtk
+    input_tags: [fmt_gnss_rov, fmt_gnss_ref, fmt_gnss_eph, fmt_dcb_file]
+    fmt_gnss_rov_roles: [rover]
+    fmt_gnss_ref_roles: [reference]
+    fmt_gnss_eph_roles: [ephemeris]
+    fmt_dcb_file_roles: [code_bias]
+    output_tags: [fmt_rtk_solution_file]
+    output_align_tag: fmt_gnss_rov
+    compute_covariance: true
+    rtk_options:
+      max_window_length: 3
+      use_ambiguity_resolution: true
+      estimate_velocity: true
+    gnss_estimator_base_options:
+      gnss_common:
+        min_elevation: 12.0        
+        min_SNR: [35.0, 30.0]
+        system_exclude: [R, E, C]
+        code_exclude: [G|5Q]
+        mw_slip_thres: 0.5
+        gf_slip_thres: 0.05
+        gf_sd_slip_thres: 0.05
+      use_outlier_rejection: true
+      max_pesudorange_error: 4.0        
+      max_phaserange_error: 0.06         
+      max_doppler_error: 0.5
+    estimator_base_options:
+      max_iteration: 5
+      num_threads: 2
+      max_solver_time: 0.02
+      verbose_output: false
+      solver_type: dense_schur
+      trust_region_strategy_type: dogleg
+    ambiguity_resolution_options:
+      system_exclude: [R]
+      min_percentage_fixation_uwl: 1.0
+      min_percentage_fixation_wl: 0.9
+      min_percentage_fixation_nl: 0.9
+      ratio: 2.0
+- estimator:
+    tag: est_gnss_imu_camera_srr
+    type: gnss_imu_camera_srr
+    input_tags: [fmt_camera, fmt_imu, est_rtk]
+    fmt_camera_roles: [mono]
+    fmt_imu_roles: [major]
+    est_rtk_roles: [position_and_velocity]
+    output_tags: [fmt_srr_solution_file]
+    # output_tags: [fmt_srr_solution_file, str_solution, str_solution_odometry, str_solution_path, str_featured_image, str_landmarks]
+    output_align_tag: fmt_imu
+    output_downsample_rate: 40            
+    compute_covariance: false
+    enable_input_align: true
+    input_align_latency: 0.2
+    enable_backend_data_spasify: true    
+    pending_num_threshold: 5
+    gnss_imu_camera_srr_options:
+      max_keyframes: 10               
+      min_yaw_std_init_visual: 5.0
+    gnss_loose_estimator_base_options:
+    visual_estimator_base_options:
+      feature_error_std: 10.0
+      landmark_outlier_rejection_threshold: 2.0
+    imu_estimator_base_options:
+      imu_parameters:
+        sigma_bg: 1.0e-3
+        sigma_ba: 1.0e-2
+        sigma_g_c: 2.6700e-04
+        sigma_a_c: 0.0112
+        sigma_gw_c: 2.0881e-06
+        sigma_aw_c: 2.7361e-04
+      body_to_imu_rotation: [-90.0, -90.0, 0.0]    
+      body_to_imu_rotation_std: 5.0
+      car_motion: true                             
+      car_motion_min_velocity: 3.0
+      car_motion_max_anguler_velocity: 5.0
+    estimator_base_options:              
+      max_iteration: 5
+      num_threads: 4     
+      max_solver_time: 0.02
+      verbose_output: true
+      solver_type: dense_schur
+      trust_region_strategy_type: dogleg
+    gnss_imu_initializer_options:
+      max_iteration: 30
+      num_threads: 4
+      max_solver_time: 0.5
+      gnss_extrinsics:  [-0.029, 0.354, -0.042]     # 
+      gnss_extrinsics_initial_std: [0.0, 0.0, 0.0]
+      time_window_length_slow_motion: 0.05
+      time_window_length_dynamic_motion: 0.5
+      min_acceleration: 0.5
+    feature_handler_options:
+      max_features_per_frame: 100
+      max_n_kfs: 30
+      kfselect_min_numkfs: 30
+      kfselect_min_disparity: 10.0
+      kfselect_min_dist_metric: 0.5
+      kfselect_min_angle: 5.0  
+      kfselect_min_dt: 1.0
+      detector:
+        cell_size: 40            
+      initialization:
+      camera_parameters:              
+        label: "gici-board"
+        cameras:
+        - camera:
+            label: cam0
+            image_width: 752
+            image_height: 480
+            type: pinhole
+            intrinsics:
+              cols: 1
+              rows: 4
+              data: [510.12091726559544, 509.55338413343736, 357.48596105253193, 240.00309579253124]
+            distortion:
+              type: radial-tangential  
+              parameters:
+                cols: 1
+                rows: 4
+                data: [-0.36472323465957157, 0.11530151924890532, 0.0006024586154990503, 0.0020184970860498133]
+            mask: <gici-root-directory>/option/gici-mask.png
+          T_B_C:
+            cols: 4
+            rows: 4
+            data: [0.0134381210697455122,   -0.999901594987671172, -0.00402706384669154413,  -0.0229793554058591656,
+                  0.999907681540912807,   0.0134460859659659704, -0.00195733688253543802,   0.0110786309679912626,
+                  0.00201129251744842832, -0.00400038914436078377,     0.99998997574430859,    0.025008868367930974,
+                                      0,                       0,                       0,                       1]
+
+logging:
+  enable: true
+  min_log_level: 0
+  log_to_stderr: true
+  file_directory: <log-directory>

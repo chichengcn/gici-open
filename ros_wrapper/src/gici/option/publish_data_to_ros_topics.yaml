@@ -1,0 +1,74 @@
+#Publish data to ros configuration yaml  
+stream:
+  streamers:
+    - streamer:
+        tag: str_gnss_rov
+        type: serial
+        port: ttyUSB0
+        baudrate: 921600
+    - streamer:
+        tag: str_gnss_ref
+        type: ntrip-client
+        ip: 101.132.190.162
+        port: 8001
+        username: ...
+        passward: ...
+        mountpoint: Channel_1
+    - streamer:
+        tag: str_camera
+        type: tcp-client
+        ip: ...
+        port: ...
+        buffer_length: 361472  # 752 * 480 + 512
+    - streamer:
+        tag: str_ros_gnss_rov
+        input_tags: [str_ros_gnss_rov]
+        type: ros
+        topic_name: gnss_rover
+        queue_size: 3
+        io: log
+        format: gnss_raw
+        enable_observation: true
+    - streamer:
+        tag: str_ros_gnss_ref
+        input_tags: [str_ros_gnss_ref]
+        type: ros
+        topic_name: gnss_reference
+        queue_size: 3
+        io: log
+        format: gnss_raw
+        enable_observation: true
+        enable_ephemeris: true
+        enable_antenna_position: true
+        enable_ionosphere_parameter: true
+    - streamer:
+        tag: str_ros_camera
+        input_tags: [str_ros_camera]
+        type: ros
+        topic_name: image_raw
+        queue_size: 10
+        io: log
+        format: image
+
+  formators:
+    - formator:
+        io: input
+        tag: str_ros_gnss_rov
+        type: gnss-raw
+        sub_type: tersus
+    - formator:
+        io: input
+        tag: str_ros_gnss_ref
+        type: gnss-rtcm-3
+
+  replay:
+    enable: false
+
+estimate:
+
+
+logging:
+  enable: true
+  min_log_level: 1
+  log_to_stderr: true
+  file_directory: <log-directory>

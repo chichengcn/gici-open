@@ -1,0 +1,96 @@
+# GICI offline pseudo-real-time SDGNSS estimation
+stream:
+  streamers:
+  - streamer:
+      tag: str_gnss_rov_file
+      output_tags: [fmt_gnss_rov]
+      type: file
+      path: <data-directory>/gnss_rover.bin
+  - streamer:
+      tag: str_gnss_ref
+      output_tags: [fmt_gnss_ref]
+      type: file
+      path: <data-directory>/gnss_reference.bin
+  - streamer:
+      tag: str_gnss_eph
+      output_tags: [fmt_gnss_eph]
+      type: file
+      path: <data-directory>/gnss_ephemeris.bin
+  - streamer:
+      tag: str_dcb_file
+      output_tags: [fmt_dcb_file]
+      type: file
+      path: <gici-root-directory>/option/CAS0MGXRAP_20221580000_01D_01D_DCB.BSX
+      enable_time_tag: false
+  - streamer:
+      tag: str_solution_file
+      input_tags: [fmt_solution_file]
+      type: file
+      path: <output-directory>/sdgnss_solution.txt
+      enable_time_tag: false
+
+  formators:
+  - formator:
+      io: input
+      tag: fmt_gnss_rov
+      type: gnss-raw
+      sub_type: tersus
+  - formator:
+      io: input
+      tag: fmt_gnss_ref
+      type: gnss-rtcm-3
+      start_time: 2023.05.21
+  - formator:
+      io: input
+      tag: fmt_gnss_eph
+      type: gnss-rtcm-3
+      start_time: 2023.05.21
+  - formator:
+      io: input
+      tag: fmt_dcb_file
+      type: dcb-file
+  - formator:
+      io: output
+      tag: fmt_solution_file
+      type: nmea 
+      use_esa: true
+      talker_id: GP
+
+  replay:
+    enable: true
+    speed: 3.0
+    start_offset: 0.0
+
+estimate:
+- estimator:
+    tag: est_gnss
+    type: sdgnss
+    input_tags: [fmt_gnss_rov, fmt_gnss_ref, fmt_gnss_eph, fmt_dcb_file]
+    fmt_gnss_rov_roles: [rover]
+    fmt_gnss_ref_roles: [reference]
+    fmt_gnss_eph_roles: [ephemeris]
+    fmt_dcb_file_roles: [code_bias]
+    output_tags: [ fmt_solution_file]
+    output_align_tag: fmt_gnss_rov
+    compute_covariance: false
+    sdgnss_options:
+      estimate_velocity: true
+    gnss_estimator_base_options:
+      gnss_common:
+        min_elevation: 12.0
+        min_SNR: [35.0, 30.0]
+      use_outlier_rejection: true
+      max_pesudorange_error: 10.0
+    estimator_base_options:
+      max_iteration: 10
+      num_threads: 2
+      max_solver_time: 0.05
+      verbose_output: true
+      solver_type: dense_schur
+      trust_region_strategy_type: dogleg
+
+logging:
+  enable: true
+  min_log_level: 0
+  log_to_stderr: true
+  file_directory: <log-directory>

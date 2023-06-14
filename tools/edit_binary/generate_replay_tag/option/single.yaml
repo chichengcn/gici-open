@@ -1,0 +1,3 @@
+client:
+  path: /media/cc/T72/ubuntu/datasets/gici/20230105_campus/03_parking/imu.bin
+  type: imu-pack

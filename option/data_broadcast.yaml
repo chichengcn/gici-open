@@ -1,0 +1,31 @@
+#Data broadcast configuration file
+stream:
+  streamers:
+    - streamer:
+        tag: str_gnss_rov
+        type: serial
+        port: /dev/ttyUSB0
+        baudrate: 921600
+    - streamer:
+        tag: str_gnss_rov_broadcast
+        input_tags: [str_gnss_rov]
+        type: ntrip-server
+        ip: 101.132.190.102
+        port: 8001
+        username: ...
+        passward: ...
+        mountpoint: ...
+
+  formators:
+    - formator:
+  replay:
+    enable: false
+
+estimate:
+
+
+logging:
+  enable: true
+  min_log_level: 1
+  log_to_stderr: true
+  file_directory: <log-directory>
