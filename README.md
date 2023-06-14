@@ -54,9 +54,9 @@ Ceres-Solver is a nonlinear optimization library. You can find the releases on [
 
 [ceres]: http://ceres-solver.org/
 
-#### 1.7 ROS Noetic. OPTIONAL.
+#### 1.7 ROS. OPTIONAL.
 
-ROS is a library for robot applications. We provide a ROS wrapper to enable GICI handling some ROS messages. If you want to build GICI with ROS, you should install ROS Noetic. You can find the instrunctions on [ROS][ros].
+ROS is a library for robot applications. We provide a ROS wrapper to enable GICI handling some ROS messages. If you want to build GICI with ROS, you should install ROS. You can find the instrunctions on [ROS][ros].
 
 [ros]: http://wiki.ros.org/Documentation
 
