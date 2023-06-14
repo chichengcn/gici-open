@@ -8,7 +8,7 @@ a) It is built under the Factor Graph Optimization (FGO) framework. It contains 
 
 b) For ease of use, the software is developed under object-oriented programming features, and the graph is designed to enable the flexible addition of sensors. By simple instantiation, one can easily form any kind of multi-sensor fusion algorithm with considerable robustness.
 
-c) It support multiple algorithm, including GNSS Single Point Positioning (SPP), Real-Time Differential (RTD), Single-Differenced GNSS (SDGNSS), Real-Time Kinematic (RTK), Precise Point Positioning (PPP), SPP-based loosely coupled (LC) and tightly coupled (TC) GNSS/Inertial Navigation System (GINS), SPP-based Solution/Raw/Raw (SRR) and Raw/Raw/Raw (RRR) GNSS/Visual/Inertial Navigation System (GVINS), RTK-based LC GINS, TC GINS, SSR GVINS, and RRR GVINS. Moreover, other integration algorithms can be instantiated by users.
+c) It supports multiple algorithms, including GNSS Single Point Positioning (SPP), Real-Time Differential (RTD), Single-Differenced GNSS (SDGNSS), Real-Time Kinematic (RTK), Precise Point Positioning (PPP), SPP-based loosely coupled (LC) and tightly coupled (TC) GNSS/Inertial Navigation System (GINS), SPP-based Solution/Raw/Raw (SRR) and Raw/Raw/Raw (RRR) GNSS/Visual/Inertial Navigation System (GVINS), RTK-based LC GINS, TC GINS, SSR GVINS, and RRR GVINS. Moreover, other integration algorithms can be instantiated by users.
 
 d) It supports multiple I/O ports, including serial, TCP/IP, NTRIP, V4L2, file, and ROS topics.
 
