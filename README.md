@@ -103,12 +103,12 @@ We support both ROS and non-ROS visualization.
 The following video is an example ROS visualization of dataset No.4.1.
 
 <a href="https://youtu.be/dAczU-7r85U" target="_blank"><img src="https://github.com/chichengcn/gici-open-dataset/blob/master/figures/run/4.1_ros.png" 
-alt="ros" width="240" height="180" border="10" /></a>
+alt="ros" width="400" height="232" border="10" /></a>
 
 The following video is an example non-ROS visualization of dataset No.4.1 using [RTKLIB](https://rtklib.com/).
 
 <a href="https://youtu.be/8TP0We9lOEQ" target="_blank"><img src="https://github.com/chichengcn/gici-open-dataset/blob/master/figures/run/4.1_non_ros.png" 
-alt="non_ros" width="500" height="425" border="10" /></a>
+alt="non_ros" width="400" height="341" border="10" /></a>
 
 ## 4. Acknowledgement
 
