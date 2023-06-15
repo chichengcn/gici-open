@@ -1,0 +1,60 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# VSCode settings
+.vscode
+
+# Distribution / packaging
+.Python
+env/
+build/
+dist/
+*.log
+
+# ROS
+devel/
+.catkin_workspace
+
+# others
+trash/
+test/
+third_party/eigen/
+third_party/glog/
+third_party/opencv/
+third_party/yaml-cpp/
+ros_wrapper/src/CMakeLists.txt
+*_with_passward.yaml
+data*/
+bin/
+lib/
+*.atx
