@@ -22,6 +22,10 @@ f) It supports multiple stream and multi-algorithm processing. No maximum quanti
 
 **Related Papers**
 
+**Dataset** [GICI-dataset](https://github.com/chichengcn/gici-open-dataset.git)
+
+**Documentation** [GICI-manual](./doc/manual.pdf)
+
 ## 1. Dependencies
 
 #### 1.1 Ubuntu
