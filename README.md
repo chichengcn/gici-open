@@ -30,7 +30,7 @@ f) It supports multiple stream and multi-algorithm processing. No maximum quanti
 
 #### 1.1 Ubuntu
 
-We are developing our code on Ubuntu 20.04, and tested on Ubuntu 18.04 and Ubuntu 22.04. We recommend you to use the same or similar environment if you do not familiar with cross-compiling.
+We are developing our code on Ubuntu 20.04, and tested on Ubuntu 18.04 and Ubuntu 22.04. We recommend you to use the same or similar environment if you are not familiar with cross-compiling.
 
 #### 1.2 Eigen 3.3 or later. REQUIRED.
 
