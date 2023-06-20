@@ -108,12 +108,12 @@ You can download our datasets on [GICI-dataset](https://github.com/chichengcn/gi
 
 We support both ROS and non-ROS visualization.
 
-The following video is an example ROS visualization of dataset No.4.1.
+The following video is an example ROS visualization.
 
 <a href="https://youtu.be/dAczU-7r85U" target="_blank"><img src="https://github.com/chichengcn/gici-open-dataset/blob/master/figures/run/4.1_ros.png" 
 alt="ros" width="500" height="290" border="10" /></a>
 
-The following video is an example non-ROS visualization of dataset No.4.1 using [RTKLIB](https://rtklib.com/).
+The following video is an example non-ROS visualization using [RTKLIB](https://rtklib.com/).
 
 <a href="https://youtu.be/8TP0We9lOEQ" target="_blank"><img src="https://github.com/chichengcn/gici-open-dataset/blob/master/figures/run/4.1_non_ros.png" 
 alt="non_ros" width="500" height="425" border="10" /></a>
