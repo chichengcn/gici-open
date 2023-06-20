@@ -64,7 +64,7 @@ Ceres-Solver is a nonlinear optimization library. You can find the releases on [
 
 #### 1.7 ROS. OPTIONAL.
 
-ROS is a library for robot applications. We provide a ROS wrapper to enable GICI handling some ROS messages. If you want to build GICI with ROS, you should install ROS. You can find the instrunctions on [ROS][ros].
+ROS is a library for robot applications. We provide a ROS wrapper to enable GICI to handle some ROS messages. If you want to build GICI with ROS, you should install ROS. You can find the instructions on [ROS][ros].
 
 [ros]: http://wiki.ros.org/Documentation
 
@@ -108,17 +108,17 @@ You can download our datasets on [GICI-dataset](https://github.com/chichengcn/gi
 
 We support both ROS and non-ROS visualization.
 
-The following video is an example ROS visualization.
+The following video is an example of ROS visualization.
 
 <a href="https://youtu.be/dAczU-7r85U" target="_blank"><img src="https://github.com/chichengcn/gici-open-dataset/blob/master/figures/run/4.1_ros.png" 
 alt="ros" width="500" height="290" border="10" /></a>
 
-The following video is an example non-ROS visualization using [RTKLIB](https://rtklib.com/).
+The following video is an example of non-ROS visualization using [RTKLIB](https://rtklib.com/).
 
 <a href="https://youtu.be/8TP0We9lOEQ" target="_blank"><img src="https://github.com/chichengcn/gici-open-dataset/blob/master/figures/run/4.1_non_ros.png" 
 alt="non_ros" width="500" height="425" border="10" /></a>
 
-## 4. Acknowledgement
+## 4. Acknowledgment
 
 Many of the GNSS tools, I/O handlers, and message de/encoders are inherited from [RTKLIB](https://rtklib.com/). The basic FGO management and the visual and IMU factors are partly inherited from [OKVIS](https://github.com/ethz-asl/okvis). The feature handler is partly inherited from [SVO 2.0](https://github.com/uzh-rpg/rpg_svo_pro_open).
 
