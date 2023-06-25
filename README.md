@@ -26,6 +26,9 @@ f) It supports multiple stream and multi-algorithm processing. No maximum quanti
 
 **Documentation** [GICI-manual](./doc/manual.pdf)
 
+<a href="https://www.youtube.com/watch?v=uO1-uRLTWl0" target="_blank"><img src="https://github.com/chichengcn/gici-open-dataset/blob/master/figures/run/long_video_cover.png" 
+alt="ros" width="500" height="290" border="10" /></a>
+
 ## 1. Dependencies
 
 #### 1.1 Ubuntu
