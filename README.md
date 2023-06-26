@@ -20,7 +20,9 @@ f) It supports multiple stream and multi-algorithm processing. No maximum quanti
 
 **Contact:** chichengcn@sjtu.edu.cn
 
-**Related Papers**
+**Related Papers** 
+
+C. Chi, X. Zhang, J. Liu, Y. Sun, Z. Zhang, and X. Zhan, "GICI-LIB: A GNSS/INS/Camera Integrated Navigation Library," arXiv preprint, arXiv:2306.13268. https://doi.org/10.48550/arXiv.2306.13268.
 
 **Dataset** [GICI-dataset](https://github.com/chichengcn/gici-open-dataset.git)
 
