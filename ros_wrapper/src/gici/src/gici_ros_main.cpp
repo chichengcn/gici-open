@@ -17,7 +17,6 @@ using namespace gici;
 
 // Process streamers and estimators which defined in config.yaml file.
 // Usage: rosrun gici_ros ros_gici_main <path-to-config> 
-// For more details on how to configure your option.yaml file, see doc/configuration_instructions.md
 int main(int argc, char** argv)
 {
   // Initialize ROS

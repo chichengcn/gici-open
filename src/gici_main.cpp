@@ -15,7 +15,6 @@ using namespace gici;
 
 // Process streamers and estimators which defined in option.yaml file.
 // Usage: <path>/gici_main <path-to-option>. 
-// For more details on how to configure your option.yaml file, see doc/configuration_instructions.md
 int main(int argc, char** argv)
 {
   // Get option file
