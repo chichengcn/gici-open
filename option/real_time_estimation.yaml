@@ -157,7 +157,7 @@ estimate:
     compute_covariance: false
     enable_input_align: true
     input_align_latency: 0.2
-    enable_backend_data_spasify: true    
+    enable_backend_data_sparsify: true    
     pending_num_threshold: 5
     gnss_imu_camera_srr_options:
       max_keyframes: 10               

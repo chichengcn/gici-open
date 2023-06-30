@@ -118,7 +118,7 @@ estimate:
     compute_covariance: false        
     enable_input_align: true
     input_align_latency: 0.2
-    enable_backend_data_spasify: true
+    enable_backend_data_sparsify: true
     pending_num_threshold: 5
     rtk_imu_camera_rrr_options:
       max_keyframes: 3
@@ -137,6 +137,8 @@ estimate:
     gnss_loose_estimator_base_options:
     visual_estimator_base_options:
       feature_error_std: 10.0
+      stable_feature_error_std: 1.0
+      min_observation_stable: 20
       landmark_outlier_rejection_threshold: 2.0
     imu_estimator_base_options:
       imu_parameters:
