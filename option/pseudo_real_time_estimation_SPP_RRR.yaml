@@ -125,8 +125,8 @@ stream:
 
   replay:
     enable: true
-    speed: 2.0
-    start_offset: 80.0
+    speed: 1.0
+    start_offset: 0.0
 
 estimate:
 - estimator:
