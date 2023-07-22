@@ -453,7 +453,7 @@ void MultiSensorEstimating::resetProcessors()
   mutex_output_.unlock();
 }
 
-// Input data callback
+// GNSS data callback
 void MultiSensorEstimating::estimatorDataCallback(EstimatorDataCluster& data)
 {
   if (estimatorDataIllegal(data)) {
