@@ -528,6 +528,10 @@ void FeatureHandler::initializeLandmarks(const FramePtr& keyframe)
     if (disparity < options_.min_disparity_init_landmark) continue;
 
     Transformation T_cur_ref = frame->T_f_w_ * ref_frame->T_f_w_.inverse();
+
+    // avoid pure rotation
+    if (T_cur_ref.getPosition().norm() < 0.2) continue;
+    
     BearingVector f_ref = ref_frame->f_vec_.col(index_ref);
     BearingVector f_cur = frame->f_vec_.col(i);
     double depth;
