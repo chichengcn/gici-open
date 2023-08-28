@@ -145,7 +145,7 @@ bool SppImuCameraRrrEstimator::addGnssMeasurementAndState(
   // Add relative errors
   if (lastGnssState().valid()) {  // maybe invalid here because of long term GNSS absent
     // frequency
-    addRelativeFrequencyBlock(lastGnssState(), states_[index]);
+    addRelativeFrequencyResidualBlock(lastGnssState(), states_[index]);
   }
 
   // Car motion

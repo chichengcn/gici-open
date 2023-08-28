@@ -68,6 +68,7 @@ enum class ErrorType: uint8_t
   kPositionError,
   kVelocityError,
   kClockError,
+  kIfbError,
   kFrequencyError,
   kTroposphereError,
   kIonosphereError,
@@ -77,7 +78,8 @@ enum class ErrorType: uint8_t
   kRelativeFrequencyError,
   kRelativeAmbiguityError,
   kRelativeTroposphereError,
-  kRelativeIonosphereError
+  kRelativeIonosphereError,
+  kRelativeIsbError
 };
 
 extern const std::map<ErrorType, std::string> kErrorToStr;

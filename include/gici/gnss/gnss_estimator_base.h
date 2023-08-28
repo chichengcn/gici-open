@@ -185,6 +185,14 @@ protected:
     GnssMeasurement& measurement, 
     bool use_single_frequency = false);
 
+  // Add position residual block to graph
+  void addGnssPositionResidualBlock(
+    const State& state, const Eigen::Vector3d& position, const double std);
+
+  // Add velocity residual block to graph
+  void addGnssVelocityResidualBlock(
+    const State& state, const Eigen::Vector3d& velocity, const double std);
+
   // Add pseudorange residual blocks to graph
   void addPseudorangeResidualBlocks(
     const GnssMeasurement& measurement,
@@ -250,11 +258,15 @@ protected:
     const State& last_state, const State& cur_state);
 
   // Add relative position and velocity block to graph
-  void addRelativePositionAndVelocityBlock(
+  void addRelativePositionAndVelocityResidualBlock(
+    const State& last_state, const State& cur_state);
+
+  // Add relative ISB block to graph
+  void addRelativeIsbResidualBlock(
     const State& last_state, const State& cur_state);
 
   // Add relative frequency block to graph
-  void addRelativeFrequencyBlock(
+  void addRelativeFrequencyResidualBlock(
     const State& last_state, const State& cur_state);
 
   // Add relative troposphere block to graph
@@ -614,10 +626,12 @@ protected:
     const int num_valid_system,
     bool log = true) {
     int base = is_use_phase_ ? 4 : 3;
-    if (num_valid_satellite < num_valid_system + base) {
+    int thr = gnss_base_options_.common.min_num_satellites;
+    if (thr < num_valid_system + base) thr = num_valid_system + base;
+    if (num_valid_satellite < thr) {
       if (!log) return false;
       LOG(INFO) << "Insufficient satellites! We need at least " 
-                   << num_valid_system + base << " satellites, "
+                   << thr << " satellites, "
                    << "but we only have " << num_valid_satellite << "!";
       return false;
     }

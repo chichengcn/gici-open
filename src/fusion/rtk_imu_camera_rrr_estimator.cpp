@@ -189,7 +189,7 @@ bool RtkImuCameraRrrEstimator::addGnssMeasurementAndState(
   // Add relative errors
   if (lastGnssState().valid()) {  // maybe invalid here because of long term GNSS absent
     // frequency
-    addRelativeFrequencyBlock(lastGnssState(), states_[index]);
+    addRelativeFrequencyResidualBlock(lastGnssState(), states_[index]);
     // ambiguity
     addRelativeAmbiguityResidualBlock(
       lastGnssRov(), curGnssRov(), lastAmbiguityState(), curAmbiguityState());

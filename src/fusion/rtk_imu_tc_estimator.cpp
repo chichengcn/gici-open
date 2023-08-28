@@ -156,7 +156,7 @@ bool RtkImuTcEstimator::addGnssMeasurementAndState(
   // Add relative errors
   if (!isFirstEpoch()) {
     // frequency
-    addRelativeFrequencyBlock(lastState(), curState());
+    addRelativeFrequencyResidualBlock(lastState(), curState());
     // ambiguity
     addRelativeAmbiguityResidualBlock(
       lastGnssRov(), curGnssRov(), lastAmbiguityState(), curAmbiguityState());

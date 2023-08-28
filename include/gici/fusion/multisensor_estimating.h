@@ -44,7 +44,7 @@ public:
   // Reset processors
   void resetProcessors();
 
-  // Estimator data callback
+  // Input data callback
   void estimatorDataCallback(EstimatorDataCluster& data) override;
 
   // Process funtion in every loop

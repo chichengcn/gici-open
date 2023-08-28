@@ -162,6 +162,34 @@ void GnssEstimatorBase::addSdAmbiguityParameterBlocks(
       addAmbiguityResidualBlock(ambiguity_base_id, init_base[0], 
         gnss_base_options_.error_parameter.initial_ambiguity);
     }
+
+    // add initial prior measurement
+    bool has_last = false;
+    if (ambiguity_states_.size() > 1)
+    for (size_t j = 0; j < lastAmbiguityState().ids.size(); j++) {
+      if (!sameAmbiguity(lastAmbiguityState().ids[j], ambiguity_id)) continue;
+
+      // check cycle slip
+      std::string prn = ambiguity_id.gPrn();
+      int phase_id = ambiguity_id.gPhaseId();
+      bool slip = false;
+
+      for (auto obs : satellite.observations) {
+        if (gnss_common::getPhaseID(satellite.getSystem(), obs.first) == phase_id) {
+          slip = obs.second.slip;
+        }
+      }
+      // if slip happened, we do not add ambiguity time constraint
+      if (slip) continue;
+
+      has_last = true;
+      break;
+    }
+    if (!has_last) {
+      addAmbiguityResidualBlock(ambiguity_id, 
+        *graph_->parameterBlockPtr(ambiguity_id.asInteger())->parameters(), 
+        gnss_base_options_.error_parameter.initial_ambiguity);
+    }
   }
 }
 

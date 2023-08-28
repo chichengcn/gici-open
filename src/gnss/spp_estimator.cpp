@@ -24,9 +24,24 @@ SppEstimator::SppEstimator(const SppEstimatorOptions& options,
   type_ = EstimatorType::Spp;
   states_.push_back(State());
   gnss_measurements_.push_back(GnssMeasurement());
-  min_elevation_ = gnss_base_options_.common.min_elevation;
-  estimate_velocity_ = spp_options_.estimate_velocity;
   can_compute_covariance_ = true;
+}
+
+SppEstimator::SppEstimator(const SppEstimatorOptions& options, 
+               const GnssEstimatorBaseOptions& gnss_base_options) :
+  spp_options_(options), 
+  GnssEstimatorBase(gnss_base_options, EstimatorBaseOptions()),
+  EstimatorBase(EstimatorBaseOptions())
+{
+  base_options_.max_iteration = 10;
+  base_options_.max_solver_time = 0.05;
+  base_options_.solver_type = ceres::DENSE_NORMAL_CHOLESKY;
+  base_options_.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
+  base_options_.verbose_output = false;
+
+  type_ = EstimatorType::Spp;
+  states_.push_back(State());
+  gnss_measurements_.push_back(GnssMeasurement());
 }
 
 SppEstimator::SppEstimator(const GnssEstimatorBaseOptions& gnss_base_options) :
@@ -43,8 +58,6 @@ SppEstimator::SppEstimator(const GnssEstimatorBaseOptions& gnss_base_options) :
   type_ = EstimatorType::Spp;
   states_.push_back(State());
   gnss_measurements_.push_back(GnssMeasurement());
-  min_elevation_ = gnss_base_options_.common.min_elevation;
-  estimate_velocity_ = spp_options_.estimate_velocity;
 }
 
 // The default destructor
@@ -73,25 +86,35 @@ bool SppEstimator::addGnssMeasurementAndState(
   else if (coordinate_) {
     position_prior = coordinate_->getZero(GeoType::ECEF);
   }
-  // no position prior, we should get a coarse inital position
-  if (checkZero(curGnss().position)) {
-    gnss_base_options_.common.min_elevation = 0.0;
-    spp_options_.estimate_velocity = false;
-  }
   else {
-    gnss_base_options_.common.min_elevation = min_elevation_;
-    spp_options_.estimate_velocity = estimate_velocity_;
+    // compute from ephemerides
+    int num_sum_satellites = 0;
+    Eigen::Vector3d sum_satellite_position = Eigen::Vector3d::Zero();
+    for (auto& sat : measurement.satellites) {
+      auto& satellite = sat.second;
+      if (checkZero(satellite.sat_position)) continue;
+      sum_satellite_position += satellite.sat_position;
+      num_sum_satellites++;
+    }
+    Eigen::Vector3d avg_satellite_position = sum_satellite_position / 
+      static_cast<double>(num_sum_satellites);
+    Eigen::Vector3d avg_lla;
+    ecef2pos(avg_satellite_position.data(), avg_lla.data());
+    avg_lla(2) = 0.0;
+    pos2ecef(avg_lla.data(), position_prior.data());
   }
 
   // Set to local measurement handle
   curGnss() = measurement;
   curGnss().position = position_prior;
 
-  // Correct code bias
-  correctCodeBias(curGnss());
+  // Erase non-base-frequency measurements and non-dual-frequency satellites
+  if (spp_options_.use_dual_frequency) arrangeDualFrequency(curGnss());
+  // Correct code bias for single frequency mode
+  else correctCodeBias(curGnss());
 
   // Compute ionosphere delays
-  computeIonosphereDelay(curGnss(), true);
+  computeIonosphereDelay(curGnss(), !spp_options_.use_dual_frequency);
 
   // Add parameter blocks
   double timestamp = measurement.timestamp;
@@ -106,7 +129,8 @@ bool SppEstimator::addGnssMeasurementAndState(
   
   // Add pseudorange residual blocks
   int num_valid_satellite = 0;
-  addPseudorangeResidualBlocks(curGnss(), curState(), num_valid_satellite, true);
+  addPseudorangeResidualBlocks(
+    curGnss(), curState(), num_valid_satellite, true);
 
   // Check if insufficient satellites
   if (!checkSufficientSatellite(num_valid_satellite, num_valid_system)) {
@@ -236,6 +260,36 @@ bool SppEstimator::estimate()
 
   if (!dop_valid) status_ = EstimatorStatus::InvalidEpoch;
   return dop_valid;
+}
+
+// Erase non-base-frequency measurements and non-dual-frequency satellites
+void SppEstimator::arrangeDualFrequency(GnssMeasurement& measurement)
+{
+  CodeBias::BaseFrequencies bases = measurement.code_bias->getBase();
+  for (auto it_sat = measurement.satellites.begin(); 
+       it_sat != measurement.satellites.end(); ) {
+    char system = it_sat->first[0];
+    std::pair<int, int> base_pair = bases.at(system);
+    int phase_id_base_lhs = 
+      gnss_common::getPhaseID(system, base_pair.first);
+    int phase_id_base_rhs = 
+      gnss_common::getPhaseID(system, base_pair.second);
+    int valid_cnt = 0;
+    for (auto it_obs = it_sat->second.observations.begin(); 
+         it_obs != it_sat->second.observations.end(); ) {
+      int phase_id = gnss_common::getPhaseID(system, it_obs->first);
+      if ((phase_id != phase_id_base_lhs && phase_id != phase_id_base_rhs) || 
+          !checkObservationValid(measurement, 
+          GnssMeasurementIndex(it_sat->first, it_obs->first))) {
+        it_obs = it_sat->second.observations.erase(it_obs);
+      }
+      else { valid_cnt++; it_obs++; }
+    }
+    if (valid_cnt != 2) {
+      it_sat = measurement.satellites.erase(it_sat);
+    }
+    else it_sat++;
+  }
 }
 
 // Get position estimate in ECEF

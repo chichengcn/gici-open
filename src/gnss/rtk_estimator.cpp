@@ -131,6 +131,16 @@ bool RtkEstimator::addGnssMeasurementAndState(
     addDopplerResidualBlocks(curGnssRov(), curState(), num_valid_satellite);
   }
 
+  // Add position and velocity prior constraints
+  if (isFirstEpoch()) {
+    addGnssPositionResidualBlock(curState(), 
+      position_prior, gnss_base_options_.error_parameter.initial_position);
+    if (rtk_options_.estimate_velocity) {
+      addGnssVelocityResidualBlock(curState(), 
+        velocity_prior, gnss_base_options_.error_parameter.initial_velocity);
+    }
+  }
+
   // Add relative errors
   if (!isFirstEpoch()) {
     if (!rtk_options_.estimate_velocity) {
@@ -139,9 +149,9 @@ bool RtkEstimator::addGnssMeasurementAndState(
     }
     else {
       // position and velocity
-      addRelativePositionAndVelocityBlock(lastState(), curState());
+      addRelativePositionAndVelocityResidualBlock(lastState(), curState());
       // frequency
-      addRelativeFrequencyBlock(lastState(), curState());
+      addRelativeFrequencyResidualBlock(lastState(), curState());
     }
     // ambiguity
     addRelativeAmbiguityResidualBlock(

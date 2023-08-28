@@ -337,6 +337,7 @@ void loadOptions<GnssCommonOptions>(
     YAML::Node& node, GnssCommonOptions& options)
 {
   LOAD_COMMON(min_elevation);
+  LOAD_COMMON(min_num_satellites);
   LOAD_COMMON(max_gdop);
   LOAD_COMMON(mw_slip_thres);
   LOAD_COMMON(gf_slip_thres);
@@ -409,6 +410,9 @@ void loadOptions<GnssErrorParameter>(
   LOAD_COMMON(troposphere_augment);
   LOAD_COMMON(ephemeris_broadcast);
   LOAD_COMMON(ephemeris_precise);
+  LOAD_COMMON(initial_position);
+  LOAD_COMMON(initial_velocity);
+  LOAD_COMMON(initial_clock);
   LOAD_COMMON(initial_troposphere);
   LOAD_COMMON(initial_ionosphere);
   LOAD_COMMON(initial_ambiguity);
@@ -720,6 +724,7 @@ void loadOptions<SppEstimatorOptions>(
     YAML::Node& node, SppEstimatorOptions& options)
 {
   LOAD_COMMON(estimate_velocity);
+  LOAD_COMMON(use_dual_frequency);
 }
 
 template <>

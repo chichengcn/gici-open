@@ -258,6 +258,9 @@ struct GnssCommonOptions {
   // SNR masks for other frequencies will be interpolated by a linear model.
   Eigen::Vector2d min_SNR = Eigen::Vector2d(25.0, 20.0);
 
+  // Minimum number of satellite to apply estimation
+  int min_num_satellites = 4;
+
   // Maximum GDOP as valid solution
   double max_gdop = 20.0;
 
@@ -313,14 +316,23 @@ struct GnssErrorParameter {
   // Precise ephemeris error
   double ephemeris_precise = 0.1;
 
+  // Initial position error
+  double initial_position = 100.0;
+
+  // Initial velocity error
+  double initial_velocity = 20.0;
+
+  // Initial clock error
+  double initial_clock = 5.0;
+
   // Initial troposphere error
-  double initial_troposphere = 0.1;
+  double initial_troposphere = 0.5;
 
   // Initial ionosphere error
-  double initial_ionosphere = 10.0;
+  double initial_ionosphere = 60.0;
   
   // Initial ambiguity error
-  double initial_ambiguity = 10.0;
+  double initial_ambiguity = 60.0;
 
   // Relative position error in m/sqrt(Hz) in ENU used in GNSS-only positioning
   Eigen::Vector3d relative_position = Eigen::Vector3d(100.0, 100.0, 100.0);
@@ -337,6 +349,9 @@ struct GnssErrorParameter {
 
   // Relative ambiguity error in m/sqrt(Hz)
   double relative_ambiguity = 1.0e-4;
+
+  // Relative ISB error in m/sqrt(Hz)
+  double relative_isb = 1.0e-3;
 
   // Relative receiver frequency error
   double relative_frequency = 1.0e-2;

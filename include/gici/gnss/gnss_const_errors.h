@@ -13,6 +13,7 @@
 namespace gici {
 
 using ClockError = ConstError<1, ErrorType::kClockError>;
+using IfbError = ConstError<1, ErrorType::kIfbError>;
 using FrequencyError = ConstError<1, ErrorType::kFrequencyError>;
 using TroposphereError = ConstError<1, ErrorType::kTroposphereError>;
 using IonosphereError = ConstError<1, ErrorType::kIonosphereError>;

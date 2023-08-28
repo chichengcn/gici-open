@@ -16,6 +16,9 @@ namespace gici {
 struct SppEstimatorOptions {
   // Estimate velocity or not
   bool estimate_velocity = true;
+
+  // Whether to use dual-frequency
+  bool use_dual_frequency = false;
 };
 
 // Estimator
@@ -27,6 +30,10 @@ public:
   SppEstimator(const SppEstimatorOptions& options, 
                const GnssEstimatorBaseOptions& gnss_base_options, 
                const EstimatorBaseOptions& base_options);
+
+  // Contructor with GNSS estimator and SPP options. Other options are setted as defualt
+  SppEstimator(const SppEstimatorOptions& options, 
+               const GnssEstimatorBaseOptions& gnss_base_options);
 
   // Contructor with GNSS estimator options. Other options are setted as defualt
   SppEstimator(const GnssEstimatorBaseOptions& gnss_base_options);
@@ -68,6 +75,9 @@ public:
   }
 
 protected:
+  // Erase non-base-frequency measurements and non-dual-frequency satellites
+  void arrangeDualFrequency(GnssMeasurement& measurement);
+
   // Get position estimate in ECEF
   Eigen::Vector3d getPositionEstimate(const State& state);
 
@@ -86,8 +96,6 @@ protected:
 protected:
   // Options
   SppEstimatorOptions spp_options_;
-  double min_elevation_;
-  bool estimate_velocity_;
 };
 
 }
