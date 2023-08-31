@@ -1397,7 +1397,6 @@ static int decode_type1042(rtcm_t *rtcm)
         eph.tgd[0]=getbits(rtcm->buff,i,10)*1E-10;        i+=10;
         eph.tgd[1]=getbits(rtcm->buff,i,10)*1E-10;        i+=10;
         eph.svh   =getbitu(rtcm->buff,i, 1);              i+= 1;
-        eph.iode = (int)(eph.toes / 720.0) % 240;
     }
     else {
         trace(2,"rtcm3 1042 length error: len=%d\n",rtcm->len);
@@ -1421,6 +1420,10 @@ static int decode_type1042(rtcm_t *rtcm)
         toc-=604800;
         week+=1;
     }
+
+    /* compute iode according to
+    http://www.beidou.gov.cn/xt/gfxz/202008/P020200803362070320926.pdf */
+    eph.iode = (int)(toc / 720.0) % 240;  
 
     eph.sat=sat;
     eph.week=adjbdtweek(week);
