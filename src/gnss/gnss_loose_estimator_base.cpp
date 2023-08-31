@@ -125,8 +125,10 @@ bool GnssLooseEstimatorBase::rejectGnssPositionAndVelocityOutliers(const State& 
       gnss_loose_base_options_.max_position_error : 
       gnss_loose_base_options_.max_velocity_error;
     if (Residuals.norm() > thr) {
-      LOG(INFO) << "Rejected GNSS " << kErrorToStr.at(error_interface->typeInfo())
-        << " with residual " << Residuals.norm();
+      if (base_options_.verbose_output) {
+        LOG(INFO) << "Rejected GNSS " << kErrorToStr.at(error_interface->typeInfo())
+          << " with residual " << Residuals.norm();
+      }
       graph_->removeResidualBlock(residual_block.residual_block_id);
       any_rejected = true;
     }

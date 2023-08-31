@@ -465,9 +465,6 @@ void ImuEstimatorBase::addZUPTResidualBlock(const State& state)
     std_acc[i] = getStandardDeviation(acc[i], median_acc[i]);
     std_gyro[i] = getStandardDeviation(gyro[i], median_gyro[i]);
   }
-  LOG(INFO) << "ZUPT: " << std::fixed << Eigen::Vector3d(std_acc).transpose() << " | " << Eigen::Vector3d(std_gyro).transpose() << " | " 
-    << Eigen::Vector3d(median_gyro).transpose() << " | " << Eigen::Vector3d(median_acc).transpose() << " | bias = " << getSpeedAndBiasEstimate(state).tail<3>().transpose()
-    << " | Velocity = " << getSpeedAndBiasEstimate(state).head<3>().transpose();
   for (int i = 0; i < 3; i++) {
     if (std_acc[i] > imu_base_options_.zupt_max_acc_std) return;
     if (std_gyro[i] > imu_base_options_.zupt_max_gyro_std) return;
@@ -498,7 +495,9 @@ void ImuEstimatorBase::addZUPTResidualBlock(const State& state)
   Eigen::Map<Eigen::Vector3d>(speed_and_bias_parameter->parameters()).setZero();
   graph_->setParameterBlockVariable(speed_and_bias_parameter);
 
-  LOG(INFO) << "Added ZUPT at " << std::fixed << state.timestamp;
+  if (base_options_.verbose_output) {
+    LOG(INFO) << "Added ZUPT at " << std::fixed << state.timestamp;
+  }
 }
 
 // Inserts a state inside or at the ends of state window
