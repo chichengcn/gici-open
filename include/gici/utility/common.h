@@ -182,6 +182,17 @@ inline double getAverage(std::vector<T>& seq) {
   return sum / static_cast<double>(seq.size());
 }
 
+// Get standard deviation value
+template<typename T>
+inline double getStandardDeviation(std::vector<T>& seq, const T& ref) {
+  if (seq.size() == 0) return 0.0;
+  double sum2 = 0.0;
+  for (size_t i = 0; i < seq.size(); i++) {
+    sum2 += square(seq[i] - ref);
+  }
+  return sqrt(sum2 / static_cast<double>(seq.size()));
+}
+
 // Compute x/y
 template<typename T>
 inline double getDivide(T x, T y) {

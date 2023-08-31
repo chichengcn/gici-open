@@ -133,7 +133,9 @@ bool RtkImuCameraRrrEstimator::addGnssMeasurementAndState(
   gnss_common::rearrangePhasesAndCodes(curGnssRef());
 
   // Form double difference pair
-  GnssMeasurementDDIndexPairs index_pairs = gnss_common::formPhaserangeDDPair(
+  GnssMeasurementDDIndexPairs code_index_pairs = gnss_common::formPseudorangeDDPair(
+    curGnssRov(), curGnssRef(), gnss_base_options_.common);
+  GnssMeasurementDDIndexPairs phase_index_pairs = gnss_common::formPhaserangeDDPair(
     curGnssRov(), curGnssRef(), gnss_base_options_.common);
 
   // Cycle-slip detection
@@ -154,7 +156,7 @@ bool RtkImuCameraRrrEstimator::addGnssMeasurementAndState(
   CHECK(gnss_extrinsics_id_.valid());
   // ambiguity blocks
   addSdAmbiguityParameterBlocks(curGnssRov(), 
-    curGnssRef(), index_pairs, curGnssRov().id, curAmbiguityState());
+    curGnssRef(), phase_index_pairs, curGnssRov().id, curAmbiguityState());
   // frequency block
   int num_valid_doppler_system = 0;
   addFrequencyParameterBlocks(curGnssRov(), curGnssRov().id, num_valid_doppler_system);
@@ -162,7 +164,7 @@ bool RtkImuCameraRrrEstimator::addGnssMeasurementAndState(
   // Add pseudorange residual blocks
   int num_valid_satellite = 0;
   addDdPseudorangeResidualBlocks(curGnssRov(), 
-    curGnssRef(), index_pairs, states_[index], num_valid_satellite);
+    curGnssRef(), code_index_pairs, states_[index], num_valid_satellite);
   
   // We do not need to check if the number of satellites is sufficient in tightly fusion.
   if (!checkSufficientSatellite(num_valid_satellite, 0)) {
@@ -180,7 +182,8 @@ bool RtkImuCameraRrrEstimator::addGnssMeasurementAndState(
   }
 
   // Add phaserange residual blocks
-  addDdPhaserangeResidualBlocks(curGnssRov(), curGnssRef(), index_pairs, states_[index]);
+  addDdPhaserangeResidualBlocks(
+    curGnssRov(), curGnssRef(), phase_index_pairs, states_[index]);
 
   // Add doppler residual blocks
   addDopplerResidualBlocks(curGnssRov(), states_[index], num_valid_satellite, 
@@ -195,6 +198,9 @@ bool RtkImuCameraRrrEstimator::addGnssMeasurementAndState(
       lastGnssRov(), curGnssRov(), lastAmbiguityState(), curAmbiguityState());
   }
 
+  // ZUPT
+  addZUPTResidualBlock(states_[index]);
+
   // Car motion
   if (imu_base_options_.car_motion) {
     // heading measurement constraint
@@ -204,7 +210,7 @@ bool RtkImuCameraRrrEstimator::addGnssMeasurementAndState(
   }
 
   // Compute DOP
-  updateGdop(curGnssRov(), index_pairs);
+  updateGdop(curGnssRov(), code_index_pairs);
 
   return true;
 }
@@ -246,6 +252,9 @@ bool RtkImuCameraRrrEstimator::addImageMeasurementAndState(
   if (!camera_extrinsics_id_.valid()) {
     camera_extrinsics_id_ = 
       addCameraExtrinsicsParameterBlock(bundle_id, curFrame()->T_imu_cam());
+    addCameraExtrinsicsResidualBlock(camera_extrinsics_id_, curFrame()->T_imu_cam(), 
+      visual_base_options_.camera_extrinsics_initial_std.head<3>(), 
+      visual_base_options_.camera_extrinsics_initial_std.tail<3>() * D2R);
   }
 
   // Initialize landmarks

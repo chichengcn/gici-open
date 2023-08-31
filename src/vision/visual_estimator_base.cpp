@@ -10,6 +10,7 @@
 
 #include "gici/estimate/pose_parameter_block.h"
 #include "gici/vision/reprojection_error.h"
+#include "gici/estimate/pose_error.h"
 
 namespace gici {
 
@@ -27,17 +28,14 @@ VisualEstimatorBase::~VisualEstimatorBase()
 // Add camera extrinsics block to graph
 BackendId VisualEstimatorBase::addCameraExtrinsicsParameterBlock(
   const int32_t id, 
-  const Transformation& T_SC_S_prior)
+  const Transformation& T_SC_prior)
 {
   BackendId pose_id = createNFrameId(id);
   BackendId camera_extrinsics_id = changeIdType(pose_id, IdType::cExtrinsics);
   std::shared_ptr<PoseParameterBlock> camera_extrinsic_parameter_block = 
     std::make_shared<PoseParameterBlock>(
-      T_SC_S_prior, camera_extrinsics_id.asInteger());
-  CHECK(graph_->addParameterBlock(camera_extrinsic_parameter_block));
-  
-  // we do not estimate camera extrinsics
-  graph_->setParameterBlockConstant(camera_extrinsics_id.asInteger());
+      T_SC_prior, camera_extrinsics_id.asInteger());
+  CHECK(graph_->addParameterBlock(camera_extrinsic_parameter_block, Graph::Pose6d));
 
   return camera_extrinsics_id;
 }
@@ -197,14 +195,29 @@ void VisualEstimatorBase::addReprojectionErrorResidualBlocks(
 // Add initial camera extrinsics error
 void VisualEstimatorBase::addCameraExtrinsicsResidualBlock(
   const BackendId& camera_extrinsics_id, 
-  const Transformation& T_SC_S_prior, 
-  const double std_translation, const double std_orientation)
+  const Transformation& T_SC_prior, 
+  const Eigen::Vector3d& std_translation, const Eigen::Vector3d& std_orientation)
 {
-  // Currently we do not support estimating camera extrinsics
-  if (std_translation != 0.0 || std_orientation != 0.0) {
-    LOG(ERROR) << "Currently we do not support estimating camera extrinsics!";
+  // set the parameter as constant
+  if ((std_translation[0] * std_translation[1] * std_translation[2] == 0.0) && 
+      (std_orientation[0] * std_orientation[1] * std_orientation[2] == 0.0)) {
+    graph_->setParameterBlockConstant(camera_extrinsics_id.asInteger());
+    return;
   }
-  graph_->setParameterBlockConstant(camera_extrinsics_id.asInteger());
+
+  Eigen::Matrix<double, 6, 6> information;
+  information.setIdentity(); 
+  for (size_t i = 0; i < 3; i++) {
+    double std_tr = std_translation[i] == 0.0 ? 1.0e-4 : std_translation[i];
+    double std_or = std_orientation[i] == 0.0 ? 1.0e-4 : std_orientation[i];
+    information(i, i) = 1.0 / square(std_tr);
+    information(i + 3, i + 3) = 1.0 / square(std_or);
+  }
+  std::shared_ptr<PoseError> pose_error = 
+    std::make_shared<PoseError>(T_SC_prior, information);
+  ceres::ResidualBlockId residual_id = 
+    graph_->addResidualBlock(pose_error, nullptr,
+      graph_->parameterBlockPtr(camera_extrinsics_id.asInteger()));
 }
 
 // Number of reprojection error
@@ -304,7 +317,7 @@ bool VisualEstimatorBase::rejectReprojectionErrorOutlier(const FramePtr& frame)
     if (need_add_it) it++;
   }
 
-  if (base_options_.verbose_output) {
+  if (base_options_.verbose_output && rejected_landmarks.size() > 0) {
     LOG(INFO) << "Rejected " << rejected_landmarks.size() << " landmark outliers. Remaining " 
               << landmarks_map_.size() << " landmarks.";
     for (size_t i = 0; i < residual_vec.size(); i++) {
@@ -522,6 +535,16 @@ void VisualEstimatorBase::updateFrameStateToFrontend(
   const State& state, const FramePtr& frame)
 {
   frame->set_T_w_imu(getPoseEstimate(state));
+}
+
+// Get extrinsics estimate
+Transformation VisualEstimatorBase::getCameraExtrinsicsEstimate()
+{
+  std::shared_ptr<PoseParameterBlock> block_ptr =
+      std::static_pointer_cast<PoseParameterBlock>(
+        graph_->parameterBlockPtr(camera_extrinsics_id_.asInteger()));
+  CHECK(block_ptr != nullptr);
+  return block_ptr->estimate();
 }
 
 }

@@ -28,6 +28,21 @@ struct ImuEstimatorBaseOptions {
   // This will be used in car motion mode to apply non-holonomic constraints.
   double body_to_imu_rotation_std = 3.0;
 
+  // ZUPT window length, we think the vehicle is stable if it keeps stady within the window.
+  double zupt_duration = 1.0;
+
+  // Maximum IMU acceleration STD to consider as stady
+  double zupt_max_acc_std = 0.5;
+
+  // Maximum IMU angular velocity STD to consider as stady
+  double zupt_max_gyro_std = 0.05;
+
+  // Maximum IMU angular velocity median to consider as stady
+  double zupt_max_gyro_median = 0.01;
+
+  // Standard deviation for ZUPT zero velocity constriant
+  double zupt_sigma_zero_velocity = 0.01;
+
   // If car motion
   bool car_motion = false;
 
@@ -168,6 +183,9 @@ protected:
 
   // Add non-holonomic constraint error
   void addNHCResidualBlock(const State& state);
+
+  // Add zero-motion update constraint error
+  void addZUPTResidualBlock(const State& state);
 
   // Inserts a state inside or at ends of state window
   // Retures the index of current added state in states_ buffer

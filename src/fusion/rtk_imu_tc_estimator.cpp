@@ -100,7 +100,9 @@ bool RtkImuTcEstimator::addGnssMeasurementAndState(
   gnss_common::rearrangePhasesAndCodes(curGnssRef());
 
   // Form double difference pair
-  GnssMeasurementDDIndexPairs index_pairs = gnss_common::formPhaserangeDDPair(
+  GnssMeasurementDDIndexPairs code_index_pairs = gnss_common::formPseudorangeDDPair(
+    curGnssRov(), curGnssRef(), gnss_base_options_.common);
+  GnssMeasurementDDIndexPairs phase_index_pairs = gnss_common::formPhaserangeDDPair(
     curGnssRov(), curGnssRef(), gnss_base_options_.common);
 
   // Cycle-slip detection
@@ -121,7 +123,7 @@ bool RtkImuTcEstimator::addGnssMeasurementAndState(
   CHECK(gnss_extrinsics_id_.valid());
   // ambiguity blocks
   addSdAmbiguityParameterBlocks(curGnssRov(), 
-    curGnssRef(), index_pairs, curGnssRov().id, curAmbiguityState());
+    curGnssRef(), phase_index_pairs, curGnssRov().id, curAmbiguityState());
   // frequency block
   int num_valid_doppler_system = 0;
   addFrequencyParameterBlocks(curGnssRov(), curGnssRov().id, num_valid_doppler_system);
@@ -129,7 +131,7 @@ bool RtkImuTcEstimator::addGnssMeasurementAndState(
   // Add pseudorange residual blocks
   int num_valid_satellite = 0;
   addDdPseudorangeResidualBlocks(curGnssRov(), 
-    curGnssRef(), index_pairs, curState(), num_valid_satellite);
+    curGnssRef(), code_index_pairs, curState(), num_valid_satellite);
   
   // We do not need to check if the number of satellites is sufficient in tightly fusion.
   if (!checkSufficientSatellite(num_valid_satellite, 0)) {
@@ -147,7 +149,8 @@ bool RtkImuTcEstimator::addGnssMeasurementAndState(
   }
 
   // Add phaserange residual blocks
-  addDdPhaserangeResidualBlocks(curGnssRov(), curGnssRef(), index_pairs, curState());
+  addDdPhaserangeResidualBlocks(
+    curGnssRov(), curGnssRef(), phase_index_pairs, curState());
 
   // Add doppler residual blocks
   addDopplerResidualBlocks(curGnssRov(), curState(), num_valid_satellite, 
@@ -162,6 +165,9 @@ bool RtkImuTcEstimator::addGnssMeasurementAndState(
       lastGnssRov(), curGnssRov(), lastAmbiguityState(), curAmbiguityState());
   }
 
+  // ZUPT
+  addZUPTResidualBlock(curState());
+
   // Car motion
   if (imu_base_options_.car_motion) {
     // heading measurement constraint
@@ -171,7 +177,7 @@ bool RtkImuTcEstimator::addGnssMeasurementAndState(
   }
 
   // Compute DOP
-  updateGdop(curGnssRov(), index_pairs);
+  updateGdop(curGnssRov(), code_index_pairs);
 
   return true;
 }

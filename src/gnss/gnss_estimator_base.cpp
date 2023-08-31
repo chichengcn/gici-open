@@ -115,7 +115,8 @@ void GnssEstimatorBase::addClockParameterBlocks(
     }
   }
 
-  // add pseudo-measurement for all systems to avoid rank deficiancy
+  // add pseudo-measurement for systems that do not have observations 
+  // to avoid rank deficiancy
   num_valid_system = 0;
   for (auto it_system : system_observation_cnt)
   {
@@ -123,6 +124,7 @@ void GnssEstimatorBase::addClockParameterBlocks(
     bool valid = it_system.second;
     if (valid) {
       num_valid_system++;
+      continue;
     }
 
     BackendId clock_id = createGnssClockId(system, id);
@@ -893,6 +895,7 @@ void GnssEstimatorBase::addDopplerResidualBlocks(
       if (use_single_frequency) {
         CodeBias::BaseFrequencies bases = measurement.code_bias->getBase();
         std::pair<int, int> base_pair = bases.at(system);
+        if (system == 'C') base_pair.first = CODE_L2I;  // use B1I for BDS
         int phase_id_base = gnss_common::getPhaseID(system, base_pair.first);
         int phase_id = gnss_common::getPhaseID(system, obs.first);
         if (phase_id_base != phase_id) continue;

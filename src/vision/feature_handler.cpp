@@ -530,7 +530,8 @@ void FeatureHandler::initializeLandmarks(const FramePtr& keyframe)
     Transformation T_cur_ref = frame->T_f_w_ * ref_frame->T_f_w_.inverse();
 
     // avoid pure rotation
-    if (T_cur_ref.getPosition().norm() < 0.2) continue;
+    if (T_cur_ref.getPosition().norm() < 
+        options_.min_translation_init_landmark) continue;
     
     BearingVector f_ref = ref_frame->f_vec_.col(index_ref);
     BearingVector f_cur = frame->f_vec_.col(i);

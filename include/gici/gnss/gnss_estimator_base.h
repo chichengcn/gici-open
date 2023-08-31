@@ -626,8 +626,8 @@ protected:
     const int num_valid_system,
     bool log = true) {
     int base = is_use_phase_ ? 4 : 3;
-    int thr = gnss_base_options_.common.min_num_satellites;
-    if (thr < num_valid_system + base) thr = num_valid_system + base;
+    int thr = num_valid_system + base + 
+      gnss_base_options_.common.min_num_satellite_redundancy;
     if (num_valid_satellite < thr) {
       if (!log) return false;
       LOG(INFO) << "Insufficient satellites! We need at least " 

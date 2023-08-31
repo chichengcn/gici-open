@@ -64,6 +64,9 @@ protected:
   void handleGNSS(const std::string& formator_tag, 
                   const std::shared_ptr<DataCluster::GNSS>& gnss);
 
+  // Update GNSS ephemerides to local
+  void updateEphemerides(const nav_t *nav);
+  
   // Update GNSS code bias to local
   void updateCodeBias();
 

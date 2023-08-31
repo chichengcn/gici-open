@@ -17,7 +17,17 @@ namespace gici {
 
 // GNSS loose estimator common options
 struct GnssLooseEstimatorBaseOptions {
+  // Use Fault Detection and Exclusion (FDE)
+  bool use_outlier_rejection = true;
 
+  // Maximum position error to exclude (m)
+  double max_position_error = 100.0;
+
+  // Maximum velocity error to exclude (m/s)
+  double max_velocity_error = 10.0;
+
+  // Minimum number of continuous large amount rejection to be considered as divergence
+  size_t diverge_min_num_continuous_reject = 10;
 };
 
 // Estimator
@@ -75,6 +85,9 @@ protected:
     const BackendId& gnss_extrinsics_id, 
     const Eigen::Vector3d& t_SR_S_prior, 
     const Eigen::Vector3d& std);
+
+  // Reject position and velocity outliers
+  bool rejectGnssPositionAndVelocityOutliers(const State& state);
 
   // Add GNSS position residual block to marginalizer
   void addGnssPositionResidualMarginBlock(const State& state);

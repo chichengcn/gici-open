@@ -439,6 +439,68 @@ void ImuEstimatorBase::addNHCResidualBlock(const State& state)
       graph_->parameterBlockPtr(speed_and_bias_id.asInteger()));
 }
 
+// Add zero-motion update constraint error
+void ImuEstimatorBase::addZUPTResidualBlock(const State& state)
+{
+  // Check zero motion
+  imu_mutex_.lock();
+  std::vector<double> acc[3], gyro[3];
+  for (int i = imu_measurements_.size() - 1; i >= 0; i--) {
+    ImuMeasurement& imu = imu_measurements_[i];
+    if (imu.timestamp > state.timestamp) continue;
+    if (imu.timestamp < state.timestamp - imu_base_options_.zupt_duration) break;
+    if (i == 0 && imu.timestamp > 
+        state.timestamp - imu_base_options_.zupt_duration) return;
+    for (int j = 0; j < 3; j++) {
+      acc[j].push_back(imu.linear_acceleration(j));
+      gyro[j].push_back(imu.angular_velocity(j));
+    }
+  }
+  imu_mutex_.unlock();
+  double median_acc[3], median_gyro[3];
+  double std_acc[3], std_gyro[3];
+  for (int i = 0; i < 3; i++) {
+    median_acc[i] = getMedian(acc[i]);
+    median_gyro[i] = getMedian(gyro[i]);
+    std_acc[i] = getStandardDeviation(acc[i], median_acc[i]);
+    std_gyro[i] = getStandardDeviation(gyro[i], median_gyro[i]);
+  }
+  LOG(INFO) << "ZUPT: " << std::fixed << Eigen::Vector3d(std_acc).transpose() << " | " << Eigen::Vector3d(std_gyro).transpose() << " | " 
+    << Eigen::Vector3d(median_gyro).transpose() << " | " << Eigen::Vector3d(median_acc).transpose() << " | bias = " << getSpeedAndBiasEstimate(state).tail<3>().transpose()
+    << " | Velocity = " << getSpeedAndBiasEstimate(state).head<3>().transpose();
+  for (int i = 0; i < 3; i++) {
+    if (std_acc[i] > imu_base_options_.zupt_max_acc_std) return;
+    if (std_gyro[i] > imu_base_options_.zupt_max_gyro_std) return;
+    if (fabs(median_gyro[i]) > imu_base_options_.zupt_max_gyro_median) return;
+  }
+
+  // Add constraint
+  SpeedAndBias speed_and_bias;
+  speed_and_bias.head<3>() = Eigen::Vector3d::Zero();
+  speed_and_bias.tail<6>().setZero();
+  const double speed_information = 
+    1.0 / square(imu_base_options_.zupt_sigma_zero_velocity);
+  const double bias_information = 1.0e-6;
+  Eigen::Matrix<double, 9, 9> information;
+  information.setIdentity();
+  information.topLeftCorner<3, 3>() *= speed_information;
+  information.bottomRightCorner<6, 6>() *= bias_information;
+  BackendId speed_and_bias_id = changeIdType(state.id_in_graph, IdType::ImuStates);
+  std::shared_ptr<SpeedAndBiasError> error = 
+    std::make_shared<SpeedAndBiasError>(speed_and_bias, information);
+  graph_->addResidualBlock(error, 
+    huber_loss_function_ ? huber_loss_function_.get() : nullptr,
+    graph_->parameterBlockPtr(speed_and_bias_id.asInteger()));
+  
+  // set velocity parameter as zero
+  auto speed_and_bias_parameter = 
+    graph_->parameterBlockPtr(speed_and_bias_id.asInteger());
+  Eigen::Map<Eigen::Vector3d>(speed_and_bias_parameter->parameters()).setZero();
+  graph_->setParameterBlockVariable(speed_and_bias_parameter);
+
+  LOG(INFO) << "Added ZUPT at " << std::fixed << state.timestamp;
+}
+
 // Inserts a state inside or at the ends of state window
 size_t ImuEstimatorBase::insertImuState(
   const double timestamp, const BackendId& backend_id,

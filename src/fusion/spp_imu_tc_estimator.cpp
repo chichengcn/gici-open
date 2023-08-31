@@ -136,6 +136,9 @@ bool SppImuTcEstimator::addGnssMeasurementAndState(
     addRelativeFrequencyResidualBlock(lastState(), curState());
   }
 
+  // ZUPT
+  addZUPTResidualBlock(curState());
+
   // Car motion
   if (imu_base_options_.car_motion) {
     // heading measurement constraint

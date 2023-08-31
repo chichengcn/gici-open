@@ -66,9 +66,9 @@ GnssSolution GnssLooseEstimatorBase::convertSolutionToGnssSolution(
   }
   
   // adjust covariance
-  // if (gnss_solution.status == GnssSolutionStatus::Float) {
-  //   gnss_solution.covariance.topLeftCorner(3, 3) *= 1.0e2;
-  // }
+  if (gnss_solution.status == GnssSolutionStatus::Float) {
+    // gnss_solution.covariance.topLeftCorner(3, 3) *= 1.0e2;
+  }
 
   return gnss_solution;
 }
@@ -101,6 +101,38 @@ BackendId GnssLooseEstimatorBase::addGnssExtrinsicsParameterBlock(
       t_SR_S_prior, gnss_extrinsics_id.asInteger());
   CHECK(graph_->addParameterBlock(gnss_extrinsic_parameter_block));
   return gnss_extrinsics_id;
+}
+
+// Reject position and velocity outliers
+bool GnssLooseEstimatorBase::rejectGnssPositionAndVelocityOutliers(const State& state)
+{
+  const BackendId& parameter_id = state.id;
+
+  // check residual
+  bool any_rejected = false;
+  Graph::ResidualBlockCollection residual_blocks = 
+    graph_->residuals(parameter_id.asInteger());
+  for (auto residual_block : residual_blocks)
+  {
+    auto error_interface = residual_block.error_interface_ptr;
+    if (error_interface->typeInfo() != ErrorType::kPositionError && 
+        error_interface->typeInfo() != ErrorType::kVelocityError) continue;
+    Eigen::VectorXd Residuals = Eigen::VectorXd::Zero(3);
+    graph_->problem()->EvaluateResidualBlock(
+        residual_block.residual_block_id, false, nullptr, Residuals.data(), nullptr);
+    error_interface->deNormalizeResidual(Residuals.data());
+    double thr = error_interface->typeInfo() == ErrorType::kPositionError ? 
+      gnss_loose_base_options_.max_position_error : 
+      gnss_loose_base_options_.max_velocity_error;
+    if (Residuals.norm() > thr) {
+      LOG(INFO) << "Rejected GNSS " << kErrorToStr.at(error_interface->typeInfo())
+        << " with residual " << Residuals.norm();
+      graph_->removeResidualBlock(residual_block.residual_block_id);
+      any_rejected = true;
+    }
+  }
+
+  return any_rejected;
 }
 
 // Add position block to graph

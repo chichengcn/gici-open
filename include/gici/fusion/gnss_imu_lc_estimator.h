@@ -67,6 +67,9 @@ protected:
 
   // Initialization control
   std::shared_ptr<GnssImuInitializer> initializer_;
+
+  // Status control
+  int num_cotinuous_reject_gnss_ = 0;
 };
 
 }

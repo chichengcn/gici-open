@@ -258,8 +258,8 @@ struct GnssCommonOptions {
   // SNR masks for other frequencies will be interpolated by a linear model.
   Eigen::Vector2d min_SNR = Eigen::Vector2d(25.0, 20.0);
 
-  // Minimum number of satellite to apply estimation
-  int min_num_satellites = 4;
+  // Minimum number of redundant satellites to apply estimation
+  int min_num_satellite_redundancy = 2;
 
   // Maximum GDOP as valid solution
   double max_gdop = 20.0;

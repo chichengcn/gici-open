@@ -50,6 +50,9 @@ struct FeatureHandlerOptions {
   // Minimum disparity to triangulate a landmark
   double min_disparity_init_landmark = 5.0;
 
+  // Minimum translation to triangulate a landmark
+  double min_translation_init_landmark = 0.2;
+
   // Feature detector options
   DetectorOptions detector;
 

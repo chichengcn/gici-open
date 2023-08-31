@@ -77,7 +77,9 @@ bool RtkEstimator::addGnssMeasurementAndState(
   gnss_common::rearrangePhasesAndCodes(curGnssRef());
 
   // Form double difference pair
-  GnssMeasurementDDIndexPairs index_pairs = gnss_common::formPhaserangeDDPair(
+  GnssMeasurementDDIndexPairs code_index_pairs = gnss_common::formPseudorangeDDPair(
+    curGnssRov(), curGnssRef(), gnss_base_options_.common);
+  GnssMeasurementDDIndexPairs phase_index_pairs = gnss_common::formPhaserangeDDPair(
     curGnssRov(), curGnssRef(), gnss_base_options_.common);
 
   // Cycle-slip detection
@@ -95,7 +97,7 @@ bool RtkEstimator::addGnssMeasurementAndState(
   curState().id_in_graph = position_id;
   // ambiguity blocks
   addSdAmbiguityParameterBlocks(curGnssRov(), 
-    curGnssRef(), index_pairs, curGnssRov().id, curAmbiguityState());
+    curGnssRef(), phase_index_pairs, curGnssRov().id, curAmbiguityState());
   if (rtk_options_.estimate_velocity) {
     // velocity block
     addGnssVelocityParameterBlock(curGnssRov().id, velocity_prior);
@@ -107,7 +109,7 @@ bool RtkEstimator::addGnssMeasurementAndState(
   // Add pseudorange residual blocks
   int num_valid_satellite = 0;
   addDdPseudorangeResidualBlocks(curGnssRov(), 
-    curGnssRef(), index_pairs, curState(), num_valid_satellite);
+    curGnssRef(), code_index_pairs, curState(), num_valid_satellite);
 
   // Check if insufficient satellites
   if (!checkSufficientSatellite(num_valid_satellite, 0)) {
@@ -124,7 +126,8 @@ bool RtkEstimator::addGnssMeasurementAndState(
   num_satellites_ = num_valid_satellite;
 
   // Add phaserange residual blocks
-  addDdPhaserangeResidualBlocks(curGnssRov(), curGnssRef(), index_pairs, curState());
+  addDdPhaserangeResidualBlocks(
+    curGnssRov(), curGnssRef(), phase_index_pairs, curState());
 
   // Add doppler residual blocks
   if (rtk_options_.estimate_velocity) {
@@ -159,7 +162,7 @@ bool RtkEstimator::addGnssMeasurementAndState(
   }
 
   // Compute DOP
-  updateGdop(curGnssRov(), index_pairs);
+  updateGdop(curGnssRov(), code_index_pairs);
 
   return true;
 }

@@ -96,6 +96,8 @@ bool GnssImuLcEstimator::addGnssSolutionMeasurementAndState(
   // GNSS velocity
   addGnssVelocityResidualBlock(curGnssSolution(), curState(), 
     getImuMeasurementNear(timestamp).angular_velocity);
+  // ZUPT
+  addZUPTResidualBlock(curState());
   // Car motion
   if (imu_base_options_.car_motion) {
     // heading measurement constraint
@@ -111,7 +113,30 @@ bool GnssImuLcEstimator::addGnssSolutionMeasurementAndState(
 bool GnssImuLcEstimator::estimate()
 {
   // Optimize
-  optimize();
+  int optimize_cnt = 0;
+  if (gnss_loose_base_options_.use_outlier_rejection)
+  while (1)
+  {
+    optimize();
+    optimize_cnt++;
+
+    // reject outlier
+    if (!rejectGnssPositionAndVelocityOutliers(curState())) break;
+  }
+  // Optimize without FDE
+  else {
+    optimize();
+  }
+
+  // Check if we rejected too many GNSS residuals
+  if (optimize_cnt > 1) num_cotinuous_reject_gnss_++;
+  else num_cotinuous_reject_gnss_ = 0;
+  if (num_cotinuous_reject_gnss_ > 
+      gnss_loose_base_options_.diverge_min_num_continuous_reject) {
+    LOG(WARNING) << "Estimator diverge: Too many GNSS outliers rejected!";
+    status_ = EstimatorStatus::Diverged;
+    num_cotinuous_reject_gnss_ = 0;
+  }
 
   // Log information
   if (base_options_.verbose_output) {

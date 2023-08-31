@@ -29,6 +29,9 @@ struct VisualEstimatorBaseOptions {
   // Landmark outliter rejection threshold (pixel)
   double landmark_outlier_rejection_threshold = 2.0;
 
+  // Camera extrinsics STD (m/deg)
+  Eigen::Matrix<double, 6, 1> camera_extrinsics_initial_std = Eigen::Matrix<double, 6, 1>::Zero();
+
   // Maximum frequency of visual backend processing (Hz)
   double max_frequency = 10.0;
 
@@ -79,7 +82,7 @@ protected:
   void addCameraExtrinsicsResidualBlock(
     const BackendId& camera_extrinsics_id, 
     const Transformation& T_SC_S_prior, 
-    const double std_translation, const double std_orientation);
+    const Eigen::Vector3d& std_translation, const Eigen::Vector3d& std_orientation);
 
   // Number of reprojection error
   size_t numReprojectionError(const FramePtr& frame);
@@ -111,6 +114,9 @@ protected:
   // Update frame pose and speed and bias to frontend
   // feature_handler_ should be locked when calling this function.
   void updateFrameStateToFrontend(const State& state, const FramePtr& frame);
+
+  // Get extrinsics estimate
+  Transformation getCameraExtrinsicsEstimate();
 
   // Get current frame bundle
   inline FrameBundlePtr& curFrameBundle() { 
