@@ -1407,6 +1407,26 @@ size_t GnssEstimatorBase::rejectPseudorangeOutlier(const State& state, bool reje
                   << ": residual = " << std::fixed << residuals[index];
       }
     }
+
+    // Check if any clock parameter block do not have residuals
+    for (auto system : getGnssSystemList())
+    {
+      BackendId clock_id = createGnssClockId(system, state.id.bundleId());
+      if (!graph_->parameterBlockExists(clock_id.asInteger())) continue;
+      if (graph_->residuals(clock_id.asInteger()).size() != 0) continue;
+      std::shared_ptr<ClockParameterBlock> block_ptr =
+          std::static_pointer_cast<ClockParameterBlock>(
+            graph_->parameterBlockPtr(clock_id.asInteger()));
+      CHECK(block_ptr != nullptr);
+      Eigen::VectorXd measurement = block_ptr->estimate();
+      Eigen::MatrixXd information = Eigen::MatrixXd::Identity(1, 1) * 
+          square(1.0 / gnss_base_options_.error_parameter.initial_clock);
+      std::shared_ptr<ClockError> clock_error = 
+        std::make_shared<ClockError>(measurement, information);
+      graph_->addResidualBlock(clock_error, nullptr, 
+        graph_->parameterBlockPtr(clock_id.asInteger()));
+    }
+
     return indexes_to_remove.size();
   }
 
@@ -1584,6 +1604,25 @@ size_t GnssEstimatorBase::rejectPseudorangeOutlier(
           LOG(INFO) << "Rejected pseudorange outlier with ambiguities" << info_message
                     << ": residual = " << std::fixed << residuals[index];
       }
+    }
+
+    // Check if any clock parameter block do not have residuals
+    for (auto system : getGnssSystemList())
+    {
+      BackendId clock_id = createGnssClockId(system, state.id.bundleId());
+      if (!graph_->parameterBlockExists(clock_id.asInteger())) continue;
+      if (graph_->residuals(clock_id.asInteger()).size() != 0) continue;
+      std::shared_ptr<ClockParameterBlock> block_ptr =
+          std::static_pointer_cast<ClockParameterBlock>(
+            graph_->parameterBlockPtr(clock_id.asInteger()));
+      CHECK(block_ptr != nullptr);
+      Eigen::VectorXd measurement = block_ptr->estimate();
+      Eigen::MatrixXd information = Eigen::MatrixXd::Identity(1, 1) * 
+          square(1.0 / gnss_base_options_.error_parameter.initial_clock);
+      std::shared_ptr<ClockError> clock_error = 
+        std::make_shared<ClockError>(measurement, information);
+      graph_->addResidualBlock(clock_error, nullptr, 
+        graph_->parameterBlockPtr(clock_id.asInteger()));
     }
 
     return indexes_to_remove.size();
@@ -1867,6 +1906,25 @@ size_t GnssEstimatorBase::rejectDopplerOutlier(const State& state, bool reject_o
                   << ": residual = " << std::fixed << residuals[index];
       }
     }
+
+    // Check if any frequency parameter block do not have residuals
+    for (auto system : getGnssSystemList())
+    {
+      BackendId freq_id = createGnssFrequencyId(system, state.id.bundleId());
+      if (!graph_->parameterBlockExists(freq_id.asInteger())) continue;
+      if (graph_->residuals(freq_id.asInteger()).size() != 0) continue;
+      std::shared_ptr<FrequencyParameterBlock> block_ptr =
+          std::static_pointer_cast<FrequencyParameterBlock>(
+            graph_->parameterBlockPtr(freq_id.asInteger()));
+      CHECK(block_ptr != nullptr);
+      Eigen::VectorXd measurement = block_ptr->estimate();
+      Eigen::MatrixXd information = Eigen::MatrixXd::Identity(1, 1) * 1e-6;
+      std::shared_ptr<FrequencyError> freq_error = 
+        std::make_shared<FrequencyError>(measurement, information);
+      graph_->addResidualBlock(freq_error, nullptr, 
+        graph_->parameterBlockPtr(freq_id.asInteger()));
+    }
+
     return indexes_to_remove.size();
   }
 

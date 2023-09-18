@@ -522,6 +522,7 @@ GnssMeasurementSDIndexPairs formPhaserangeSDPair(
 GnssMeasurementDDIndexPairs formPseudorangeDDPair(
                             const GnssMeasurement& measurement_rov, 
                             const GnssMeasurement& measurement_ref,
+                            std::map<char, std::string>& system_to_base_prn,
                             const GnssCommonOptions& options)
 {
   // Form SD pair
@@ -572,9 +573,12 @@ GnssMeasurementDDIndexPairs formPseudorangeDDPair(
   }
 
   // Find base satellites for each system and codes
-  std::map<char, std::string> system_to_base_prn;
   for (size_t i = 0; i < getGnssSystemList().size(); i++) {
     char system = getGnssSystemList()[i];
+
+    // check if we already selected a base
+    if (system_to_base_prn.find(system) != system_to_base_prn.end() && 
+        !system_to_base_prn.at(system).empty()) continue;
 
     // find satellite with maximum elevation angle
     double max_elevation = 0.0;
@@ -622,6 +626,7 @@ GnssMeasurementDDIndexPairs formPseudorangeDDPair(
 GnssMeasurementDDIndexPairs formPhaserangeDDPair(
                             const GnssMeasurement& measurement_rov, 
                             const GnssMeasurement& measurement_ref,
+                            std::map<char, std::string>& system_to_base_prn,
                             const GnssCommonOptions& options)
 {
   // Form SD pair
@@ -676,9 +681,12 @@ GnssMeasurementDDIndexPairs formPhaserangeDDPair(
   }
 
   // Find base satellites for each system and phases
-  std::map<char, std::string> system_to_base_prn;
   for (size_t i = 0; i < getGnssSystemList().size(); i++) {
     char system = getGnssSystemList()[i];
+
+    // check if we already selected a base
+    if (system_to_base_prn.find(system) != system_to_base_prn.end() && 
+        !system_to_base_prn.at(system).empty()) continue;
 
     double max_elevation = 0.0;
     for (size_t j = 0; j < sd_pairs.size(); j++) {

@@ -71,8 +71,9 @@ bool DgnssEstimator::addGnssMeasurementAndState(
   curGnssRef() = measurement_ref;
 
   // Form double difference pair
+  std::map<char, std::string> system_to_base_prn;
   GnssMeasurementDDIndexPairs index_pairs = gnss_common::formPseudorangeDDPair(
-    curGnssRov(), curGnssRef(), gnss_base_options_.common);
+    curGnssRov(), curGnssRef(), system_to_base_prn, gnss_base_options_.common);
 
   // Add parameter blocks
   double timestamp = curGnssRov().timestamp;

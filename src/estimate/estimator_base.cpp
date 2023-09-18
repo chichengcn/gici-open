@@ -187,6 +187,10 @@ bool EstimatorBase::getCovarianceAt(
 Transformation EstimatorBase::getPoseEstimate(const State& state)
 {
   BackendId id = state.id_in_graph;
+  if (!graph_->parameterBlockExists(id.asInteger())) {
+    LOG(ERROR) << "Parameter block with id " << id << " does not exist!";
+    return Transformation();
+  }
 
   // GNSS position state
   if (id.type() == IdType::gPosition)
@@ -224,6 +228,10 @@ Transformation EstimatorBase::getPoseEstimate(const State& state)
 SpeedAndBias EstimatorBase::getSpeedAndBiasEstimate(const State& state)
 {
   BackendId id = state.id_in_graph;
+  if (!graph_->parameterBlockExists(id.asInteger())) {
+    LOG(ERROR) << "Parameter block with id " << id << " does not exist!";
+    return SpeedAndBias::Zero();
+  }
 
   // GNSS position state
   if (id.type() == IdType::gPosition)

@@ -179,12 +179,14 @@ GnssMeasurementSDIndexPairs formPhaserangeSDPair(
 GnssMeasurementDDIndexPairs formPseudorangeDDPair(
                             const GnssMeasurement& measurement_rov, 
                             const GnssMeasurement& measurement_ref,
+                            std::map<char, std::string>& system_to_base_prn,
                             const GnssCommonOptions& options = GnssCommonOptions());
 
 // Form double difference phaserange pair
 GnssMeasurementDDIndexPairs formPhaserangeDDPair(
                             const GnssMeasurement& measurement_rov, 
                             const GnssMeasurement& measurement_ref,
+                            std::map<char, std::string>& system_to_base_prn,
                             const GnssCommonOptions& options = GnssCommonOptions());
 
 // ----------------------------------------------------------

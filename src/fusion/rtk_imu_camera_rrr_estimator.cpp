@@ -133,10 +133,11 @@ bool RtkImuCameraRrrEstimator::addGnssMeasurementAndState(
   gnss_common::rearrangePhasesAndCodes(curGnssRef());
 
   // Form double difference pair
-  GnssMeasurementDDIndexPairs code_index_pairs = gnss_common::formPseudorangeDDPair(
-    curGnssRov(), curGnssRef(), gnss_base_options_.common);
+  std::map<char, std::string> system_to_base_prn;
   GnssMeasurementDDIndexPairs phase_index_pairs = gnss_common::formPhaserangeDDPair(
-    curGnssRov(), curGnssRef(), gnss_base_options_.common);
+    curGnssRov(), curGnssRef(), system_to_base_prn, gnss_base_options_.common);
+  GnssMeasurementDDIndexPairs code_index_pairs = gnss_common::formPseudorangeDDPair(
+    curGnssRov(), curGnssRef(), system_to_base_prn, gnss_base_options_.common);
 
   // Cycle-slip detection
   if (!isFirstEpoch()) {
