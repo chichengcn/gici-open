@@ -702,6 +702,7 @@ void loadOptions<ImuEstimatorBaseOptions>(
 {
   LOAD_COMMON(car_motion);
   LOAD_COMMON(body_to_imu_rotation_std);
+  LOAD_COMMON(use_zupt);
   LOAD_COMMON(zupt_duration);
   LOAD_COMMON(zupt_max_acc_std);
   LOAD_COMMON(zupt_max_gyro_std);

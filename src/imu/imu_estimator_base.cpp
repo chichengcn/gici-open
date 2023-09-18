@@ -442,6 +442,8 @@ void ImuEstimatorBase::addNHCResidualBlock(const State& state)
 // Add zero-motion update constraint error
 void ImuEstimatorBase::addZUPTResidualBlock(const State& state)
 {
+  if (!imu_base_options_.zupt_duration) return;
+
   // Check zero motion
   imu_mutex_.lock();
   std::vector<double> acc[3], gyro[3];

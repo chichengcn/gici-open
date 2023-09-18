@@ -28,6 +28,9 @@ struct ImuEstimatorBaseOptions {
   // This will be used in car motion mode to apply non-holonomic constraints.
   double body_to_imu_rotation_std = 3.0;
 
+  // If use zero motion update (ZUPT)
+  bool use_zupt = false;
+
   // ZUPT window length, we think the vehicle is stable if it keeps stady within the window.
   double zupt_duration = 1.0;
 
