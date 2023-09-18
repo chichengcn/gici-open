@@ -597,28 +597,40 @@ void CodeBias::putTgdsToAllSourceDcbs()
     else if (tgd.type == TgdIscType::GpsTgd) {
       dcb.code1 = CODE_L1W;
       dcb.code2 = CODE_L2W;
+      double f1 = gnss_common::codeToFrequency(prn[0], dcb.code1);
+      double f2 = gnss_common::codeToFrequency(prn[0], dcb.code2);
+      dcb.value = tgd.value * (1 - square(f1 / f2));
     }
     else if (tgd.type == TgdIscType::GlonassTgd) {
       dcb.code1 = CODE_L1P;
       dcb.code2 = CODE_L2P;
+      dcb.value = -tgd.value;
     }
     else if (tgd.type == TgdIscType::GalileoBgdE1E5a) {
       dcb.code1 = CODE_L1C;
       dcb.code2 = CODE_L5Q;
+      double f1 = gnss_common::codeToFrequency(prn[0], dcb.code1);
+      double f2 = gnss_common::codeToFrequency(prn[0], dcb.code2);
+      dcb.value = tgd.value * (1 - square(f1 / f2));
     }
     else if (tgd.type == TgdIscType::GalileoBgdE1E5b) {
+      // F/NAV
       dcb.code1 = CODE_L1C;
       dcb.code2 = CODE_L7Q;
+      double f1 = gnss_common::codeToFrequency(prn[0], dcb.code1);
+      double f2 = gnss_common::codeToFrequency(prn[0], dcb.code2);
+      dcb.value = tgd.value * (1 - square(f1 / f2));
     }
     else if (tgd.type == TgdIscType::BdsTgdB1B3) {
       dcb.code1 = CODE_L2I;
       dcb.code2 = CODE_L6I;
+      dcb.value = tgd.value;
     }
     else if (tgd.type == TgdIscType::BdsTgdB2B3) {
       dcb.code1 = CODE_L7I;
       dcb.code2 = CODE_L6I;
+      dcb.value = tgd.value;
     }
-    dcb.value = tgd.value;
     dcb.std = 0.3;
 
     all_source_dcbs_coarse_.insert(std::make_pair(prn, dcb));
