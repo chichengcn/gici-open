@@ -286,6 +286,8 @@ void AmbiguityResolution::formSatellitePairRtk()
     Spec& ambiguity = curAmbs()[i];
     char system = ambiguity.id.gSystem();
     std::string prn = ambiguity.id.gPrn();
+    if (system_to_reference_prn.find(system) == 
+        system_to_reference_prn.end()) continue;
     std::string prn_ref = system_to_reference_prn.at(system);
 
     if (prn == prn_ref) {

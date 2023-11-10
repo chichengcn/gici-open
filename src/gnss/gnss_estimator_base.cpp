@@ -349,9 +349,12 @@ void GnssEstimatorBase::addIonosphereParameterBlocks(
         break;
       }
     }
-    if (!has_last && satellite.ionosphere_type == IonoType::DualFrequency) {
-      addIonosphereResidualBlock(iono_id, init[0], 
-        gnss_base_options_.error_parameter.initial_ionosphere);
+    if (!has_last) {
+      double initial_ionosphere = 
+        gnss_base_options_.error_parameter.initial_ionosphere;
+      if (satellite.ionosphere_type == IonoType::Broadcast || 
+          satellite.ionosphere_type == IonoType::None) initial_ionosphere += 1000.0;
+      addIonosphereResidualBlock(iono_id, init[0], initial_ionosphere);
     }
   }
 }
@@ -422,10 +425,14 @@ void GnssEstimatorBase::addAmbiguityParameterBlocks(
         has_last = true;
         break;
       }
-      if (!has_last && satellite.ionosphere_type == IonoType::DualFrequency) {
+      if (!has_last) {
+        double initial_ambiguity = 
+          gnss_base_options_.error_parameter.initial_ambiguity;
+        if (satellite.ionosphere_type == IonoType::Broadcast || 
+            satellite.ionosphere_type == IonoType::None) initial_ambiguity += 1000.0;
         addAmbiguityResidualBlock(ambiguity_id, 
           *graph_->parameterBlockPtr(ambiguity_id.asInteger())->parameters(), 
-          gnss_base_options_.error_parameter.initial_ambiguity);
+          initial_ambiguity);
       }
     }
   }
