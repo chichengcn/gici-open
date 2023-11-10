@@ -541,7 +541,7 @@ void FeatureHandler::initializeLandmarks(const FramePtr& keyframe)
     if (depth < 0.1) continue;
     // Note that the follow equation should not be T * f_ref * depth.
     // Because the operater "*" is applied in homogeneous coordinate
-    landmark->pos_ = ref_frame->T_world_cam() * (f_ref * depth);
+    landmark->pos_ = ref_frame->T_world_cam() * (f_ref / f_ref(2) * depth);
 
     // Change feature type
     for (auto obs : landmark->obs_) {
