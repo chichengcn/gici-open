@@ -1131,6 +1131,15 @@ void GnssEstimatorBase::addRelativeTroposphereResidualBlock(
 
   BackendId last_tropo_id = changeIdType(last_id, IdType::gTroposphere);
   BackendId cur_tropo_id = changeIdType(cur_id, IdType::gTroposphere);
+  
+  if (!graph_->parameterBlockExists(last_tropo_id.asInteger())) {
+    LOG(INFO) << "Last troposphere parameter block does not exist.";
+    return;
+  }
+  if (!graph_->parameterBlockExists(cur_tropo_id.asInteger())) {
+    LOG(INFO) << "Current troposphere parameter block does not exist.";
+    return;
+  }
 
   double dt = cur_state.timestamp - last_state.timestamp;
   CHECK(dt >= 0.0);

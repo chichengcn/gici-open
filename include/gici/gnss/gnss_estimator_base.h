@@ -429,8 +429,14 @@ protected:
   // Create pseudorange residual logger
   void createPseudorangeResidualLogger(const std::string& directory);
 
+  // Create DD pseudorange residual logger
+  void createDdPseudorangeResidualLogger(const std::string& directory);
+
   // Create phaserange residual logger
   void createPhaserangeResidualLogger(const std::string& directory);
+
+  // Create DD phaserange residual logger
+  void createDdPhaserangeResidualLogger(const std::string& directory);
 
   // Log ambiguity estimate
   void logAmbiguityEstimate();
@@ -441,8 +447,14 @@ protected:
   // Log pseudorange residual
   void logPseudorangeResidual();
 
+  // Log DD pseudorange residual
+  void logDdPseudorangeResidual();
+
   // Log phasernage residual
   void logPhaserangeResidual();
+
+  // Log DD phasernage residual
+  void logDdPhaserangeResidual();
 
   // Free ambiguity logger
   void freeAmbiguityLogger();
@@ -453,8 +465,14 @@ protected:
   // Free pseudorange residual logger
   void freePseudorangeResidualLogger();
 
+  // Free DD pseudorange residual logger
+  void freeDdPseudorangeResidualLogger();
+
   // Free phaserange residual logger
   void freePhaserangeResidualLogger();
+
+  // Free DD phaserange residual logger
+  void freeDdPhaserangeResidualLogger();
 
   // Compute and update GDOP
   inline void updateGdop(const GnssMeasurement& measurement) {
@@ -696,7 +714,9 @@ protected:
   std::ofstream ambiguity_logger_;
   std::ofstream ionosphere_logger_;
   std::ofstream pseudorange_residual_logger_;
+  std::ofstream dd_pseudorange_residual_logger_;
   std::ofstream phaserange_residual_logger_;
+  std::ofstream dd_phaserange_residual_logger_;
 };
 
 }

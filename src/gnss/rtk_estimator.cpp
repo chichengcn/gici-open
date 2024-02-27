@@ -33,6 +33,14 @@ RtkEstimator::RtkEstimator(const RtkEstimatorOptions& options,
 
   // Ambiguity resolution
   ambiguity_resolution_.reset(new AmbiguityResolution(ambiguity_options, graph_));
+
+  // Open intermediate data logging files
+  if (base_options_.log_intermediate_data) {
+    const std::string& directory = base_options_.log_intermediate_data_directory;
+    createAmbiguityLogger(directory);
+    createDdPseudorangeResidualLogger(directory);
+    createDdPhaserangeResidualLogger(directory);
+  }
 }
 
 // The default destructor
@@ -274,6 +282,15 @@ bool RtkEstimator::estimate()
   shiftMemory();
 
   return true;
+}
+
+// Log intermediate data
+void RtkEstimator::logIntermediateData()
+{
+  if (!base_options_.log_intermediate_data) return;
+  logAmbiguityEstimate();
+  logDdPseudorangeResidual();
+  logDdPhaserangeResidual();
 }
 
 // Marginalization

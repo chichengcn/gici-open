@@ -55,6 +55,19 @@ void GnssEstimatorBase::createPseudorangeResidualLogger(const std::string& direc
   pseudorange_residual_logger_.open(path, std::ios::out | std::ios::trunc);
 }
 
+// Create DD pseudorange residual logger
+void GnssEstimatorBase::createDdPseudorangeResidualLogger(const std::string& directory)
+{
+  double time = vk::Timer::getCurrentTime();
+  double ep[6];
+  char buf[32];
+  time2epoch(gnss_common::doubleToGtime(time), ep);
+  sprintf(buf, "%04d%02d%02d-%02d%02d%02d", 
+    (int)ep[0], (int)ep[1], (int)ep[2], (int)ep[3], (int)ep[4], (int)ep[5]);
+  std::string path = directory + "/dd_pseudorange_residual-" + buf + ".log";
+  dd_pseudorange_residual_logger_.open(path, std::ios::out | std::ios::trunc);
+}
+
 // Create phaserange residual logger
 void GnssEstimatorBase::createPhaserangeResidualLogger(const std::string& directory)
 {
@@ -66,6 +79,19 @@ void GnssEstimatorBase::createPhaserangeResidualLogger(const std::string& direct
     (int)ep[0], (int)ep[1], (int)ep[2], (int)ep[3], (int)ep[4], (int)ep[5]);
   std::string path = directory + "/phaserange_residual-" + buf + ".log";
   phaserange_residual_logger_.open(path, std::ios::out | std::ios::trunc);
+}
+
+// Create DD phaserange residual logger
+void GnssEstimatorBase::createDdPhaserangeResidualLogger(const std::string& directory)
+{
+  double time = vk::Timer::getCurrentTime();
+  double ep[6];
+  char buf[32];
+  time2epoch(gnss_common::doubleToGtime(time), ep);
+  sprintf(buf, "%04d%02d%02d-%02d%02d%02d", 
+    (int)ep[0], (int)ep[1], (int)ep[2], (int)ep[3], (int)ep[4], (int)ep[5]);
+  std::string path = directory + "/dd_phaserange_residual-" + buf + ".log";
+  dd_phaserange_residual_logger_.open(path, std::ios::out | std::ios::trunc);
 }
 
 // Log ambiguity estimate
@@ -195,6 +221,57 @@ void GnssEstimatorBase::logPseudorangeResidual()
   }
 }
 
+// Log DD pseudorange residual
+void GnssEstimatorBase::logDdPseudorangeResidual()
+{
+  // Get residuals
+  State& state = lastState();
+  const auto& residuals = graph_->residuals(state.id.asInteger());
+  std::map<std::pair<std::string, std::string>, 
+    std::map<std::string, double>> residual_values;
+  for (const auto& residual : residuals) {
+    const ceres::ResidualBlockId id = residual.residual_block_id;
+    const std::shared_ptr<ErrorInterface>& interface = residual.error_interface_ptr;
+    if (interface->typeInfo() != ErrorType::kPseudorangeErrorDD) continue;
+
+    GnssMeasurementDDIndexPair index = 
+      getGnssMeasurementDDIndexPairFromErrorInterface(interface);
+    std::string prn = index.rov.prn;
+    std::string code_str = gnss_common::codeTypeToRinexType(prn[0], index.rov.code_type);
+    std::pair<std::string, std::string> prn_pair = 
+      std::make_pair(index.rov.prn, index.rov_base.prn);
+    double residual_evaluate[1];
+    graph_->problem_->EvaluateResidualBlock(
+        id, false, nullptr, residual_evaluate, nullptr);
+    interface->deNormalizeResidual(residual_evaluate);
+    if (residual_values.find(prn_pair) == residual_values.end()) {
+      residual_values.insert(std::make_pair(prn_pair, std::map<std::string, double>()));
+    }
+    std::map<std::string, double>& code_to_value = residual_values.at(prn_pair);
+    code_to_value.insert(std::make_pair(code_str, residual_evaluate[0]));
+  }
+
+  // Log to file
+  double ep[6];
+  time2epoch(gnss_common::doubleToGtime(state.timestamp), ep);
+  char time_buf[64];
+  sprintf(time_buf, "> %04d %02d %02d %02d %02d %10.7lf  %17.7lf",
+    (int)ep[0], (int)ep[1], (int)ep[2], (int)ep[3], (int)ep[4], ep[5],
+    state.timestamp);
+  dd_pseudorange_residual_logger_ << time_buf << std::endl;
+  for (auto i : residual_values) {
+    const auto& prn_pair = i.first;
+    dd_pseudorange_residual_logger_ << prn_pair.second << "-" << prn_pair.first << " ";
+    for (auto j : i.second) {
+      const std::string& code_str = j.first;
+      const double& value = j.second;
+      dd_pseudorange_residual_logger_ << code_str << " "
+        << std::fixed << std::setprecision(4) << value << " ";
+    }
+    dd_pseudorange_residual_logger_ << std::endl;
+  }
+}
+
 // Log phaserange residual
 void GnssEstimatorBase::logPhaserangeResidual()
 {
@@ -249,6 +326,63 @@ void GnssEstimatorBase::logPhaserangeResidual()
   }
 }
 
+// Log DD phaserange residual
+void GnssEstimatorBase::logDdPhaserangeResidual()
+{
+  // Get residuals
+  State& state = lastState();
+  const auto& residuals = graph_->residuals(state.id.asInteger());
+  std::map<std::pair<std::string, std::string>, 
+    std::map<std::string, double>> residual_values;
+  for (const auto& residual : residuals) {
+    const ceres::ResidualBlockId id = residual.residual_block_id;
+    const std::shared_ptr<ErrorInterface>& interface = residual.error_interface_ptr;
+    if (interface->typeInfo() != ErrorType::kPhaserangeErrorDD) continue;
+
+    GnssMeasurementDDIndexPair index = 
+      getGnssMeasurementDDIndexPairFromErrorInterface(interface);
+    std::string prn = index.rov.prn;
+    char system = prn[0];
+    int phase_id = gnss_common::getPhaseID(system, index.rov.code_type);
+    std::pair<std::string, std::string> prn_pair = 
+      std::make_pair(index.rov.prn, index.rov_base.prn);
+    std::string phase_str;
+#define MAP(S, P, PS) \
+    if (system == S && phase_id == P) { phase_str = PS; }
+    PHASE_CHANNEL_TO_STR_MAPS;
+#undef MAP
+    double residual_evaluate[1];
+    graph_->problem_->EvaluateResidualBlock(
+        id, false, nullptr, residual_evaluate, nullptr);
+    interface->deNormalizeResidual(residual_evaluate);
+    if (residual_values.find(prn_pair) == residual_values.end()) {
+      residual_values.insert(std::make_pair(prn_pair, std::map<std::string, double>()));
+    }
+    std::map<std::string, double>& phase_to_value = residual_values.at(prn_pair);
+    phase_to_value.insert(std::make_pair(phase_str, residual_evaluate[0]));
+  }
+
+  // Log to file
+  double ep[6];
+  time2epoch(gnss_common::doubleToGtime(state.timestamp), ep);
+  char time_buf[64];
+  sprintf(time_buf, "> %04d %02d %02d %02d %02d %10.7lf  %17.7lf",
+    (int)ep[0], (int)ep[1], (int)ep[2], (int)ep[3], (int)ep[4], ep[5],
+    state.timestamp);
+  dd_phaserange_residual_logger_ << time_buf << std::endl;
+  for (auto i : residual_values) {
+    const auto& prn_pair = i.first;
+    dd_phaserange_residual_logger_ << prn_pair.second << "-" << prn_pair.first << " ";
+    for (auto j : i.second) {
+      const std::string& phase_str = j.first;
+      const double& value = j.second;
+      dd_phaserange_residual_logger_ << phase_str << " "
+        << std::fixed << std::setprecision(4) << value << " ";
+    }
+    dd_phaserange_residual_logger_ << std::endl;
+  }
+}
+
 // Free ambiguity logger
 void GnssEstimatorBase::freeAmbiguityLogger()
 {
@@ -267,10 +401,22 @@ void GnssEstimatorBase::freePseudorangeResidualLogger()
   pseudorange_residual_logger_.close();
 }
 
+// Free DD pseudorange residual logger
+void GnssEstimatorBase::freeDdPseudorangeResidualLogger()
+{
+  dd_pseudorange_residual_logger_.close();
+}
+
 // Free phaserange residual logger
 void GnssEstimatorBase::freePhaserangeResidualLogger()
 {
   phaserange_residual_logger_.close();
+}
+
+// Free DD phaserange residual logger
+void GnssEstimatorBase::freeDdPhaserangeResidualLogger()
+{
+  dd_phaserange_residual_logger_.close();
 }
 
 }
