@@ -66,18 +66,22 @@ void DataCluster::GNSS::init()
   if (!(observation = (obs_t *)malloc(sizeof(obs_t))) ||
     !(observation->data = (obsd_t *)malloc(sizeof(obsd_t) * MAXOBS)) ||
     !(ephemeris = (nav_t *)malloc(sizeof(nav_t))) ||
-    !(ephemeris->eph = (eph_t  *)malloc(sizeof(eph_t) * MAXSAT * 2)) ||
-    !(ephemeris->geph = (geph_t *)malloc(sizeof(geph_t) * NSATGLO * 2)) ||
     !(antenna = (sta_t *)malloc(sizeof(sta_t))) ) {
     free();
   }
+
+  memset(ephemeris, 0, sizeof(nav_t));
+  if (!(ephemeris->eph = (eph_t  *)malloc(sizeof(eph_t) * MAXSAT * 2)) ||
+      !(ephemeris->geph = (geph_t *)malloc(sizeof(geph_t) * NSATGLO * 2))) {
+    free();
+  }
+
   eph_t  eph0 = {0, -1, -1};
   geph_t geph0 = {0, -1};
   for (int i = 0; i < MAXSAT *2; i++) ephemeris->eph[i] = eph0;
   for (int i = 0; i < NSATGLO * 2 ; i++) ephemeris->geph[i] = geph0;
   ephemeris->n = MAXSAT * 2;
   ephemeris->ng = NSATGLO * 2;
-  memset(ephemeris->ssr, 0, sizeof(ssr_t) * MAXSAT);
   memset(antenna, 0, sizeof(sta_t));
 }
 
@@ -200,7 +204,7 @@ extern void updateAntennaPosition(
 // Update ssr corrections
 extern void updateSsr(
   ssr_t *ssr, std::shared_ptr<DataCluster::GNSS>& gnss_data,
-  std::vector<UpdateSsrType> type)
+  std::vector<UpdateSsrType> type, bool reset_ssr_status)
 {
   if (ssr == NULL) {
     LOG(ERROR) << "SSR parameter has NULL pointer!";
@@ -209,7 +213,7 @@ extern void updateSsr(
   for (int i = 0; i < MAXSAT; i++) 
   {
     if (!ssr[i].update) continue;
-    ssr[i].update = 0;
+    if (reset_ssr_status) ssr[i].update = 0;
     
     // update ephemeris
     if (std::find(type.begin(), type.end(), 
@@ -218,26 +222,53 @@ extern void updateSsr(
       // check consistency between iods of orbit and clock
       if (ssr[i].iod[0] != ssr[i].iod[1]) continue;
 
-      // TODO: check corresponding ephemeris exists
-      for (int j = 0; j < 4; j++) {
-        gnss_data->ephemeris->ssr[i].t0[j] = ssr[i].t0[j];
-        gnss_data->ephemeris->ssr[i].udi[j] = ssr[i].udi[j];
-        gnss_data->ephemeris->ssr[i].iod[j] = ssr[i].iod[j];
-      }
+      // common
       gnss_data->ephemeris->ssr[i].iode = ssr[i].iode;
       gnss_data->ephemeris->ssr[i].iodcrc = ssr[i].iodcrc;
-      gnss_data->ephemeris->ssr[i].ura = ssr[i].ura;
       gnss_data->ephemeris->ssr[i].refd = ssr[i].refd;
-      for (int j = 0; j < 3; j++) {
-        gnss_data->ephemeris->ssr[i].deph[j] = ssr[i].deph[j];
-        gnss_data->ephemeris->ssr[i].ddeph[j] = ssr[i].ddeph[j];
-        gnss_data->ephemeris->ssr[i].dclk[j] = ssr[i].dclk[j];
+      
+      // ephemeris
+      if (ssr[i].t0[0].time) {
+        gnss_data->ephemeris->ssr[i].t0[0] = ssr[i].t0[0];
+        gnss_data->ephemeris->ssr[i].udi[0] = ssr[i].udi[0];
+        gnss_data->ephemeris->ssr[i].iod[0] = ssr[i].iod[0];
+        for (int j = 0; j < 3; j++) {
+          gnss_data->ephemeris->ssr[i].deph[j] = ssr[i].deph[j];
+          gnss_data->ephemeris->ssr[i].ddeph[j] = ssr[i].ddeph[j];
+        }
       }
-      gnss_data->ephemeris->ssr[i].hrclk = ssr[i].hrclk;
+
+      // clock
+      if (ssr[i].t0[1].time) {
+        gnss_data->ephemeris->ssr[i].t0[1] = ssr[i].t0[1];
+        gnss_data->ephemeris->ssr[i].udi[1] = ssr[i].udi[1];
+        gnss_data->ephemeris->ssr[i].iod[1] = ssr[i].iod[1];
+        for (int j = 0; j < 3; j++) {
+          gnss_data->ephemeris->ssr[i].dclk[j] = ssr[i].dclk[j];
+        }
+      }
+
+      // high rate clock
+      if (ssr[i].t0[2].time) {
+        gnss_data->ephemeris->ssr[i].t0[2] = ssr[i].t0[2];
+        gnss_data->ephemeris->ssr[i].udi[2] = ssr[i].udi[2];
+        gnss_data->ephemeris->ssr[i].iod[2] = ssr[i].iod[2];
+        gnss_data->ephemeris->ssr[i].hrclk = ssr[i].hrclk;
+      }
+
+      // ura
+      if (ssr[i].t0[3].time) {
+        gnss_data->ephemeris->ssr[i].t0[3] = ssr[i].t0[3];
+        gnss_data->ephemeris->ssr[i].udi[3] = ssr[i].udi[3];
+        gnss_data->ephemeris->ssr[i].iod[3] = ssr[i].iod[3];
+        gnss_data->ephemeris->ssr[i].hrclk = ssr[i].hrclk;
+        gnss_data->ephemeris->ssr[i].ura = ssr[i].ura;
+      }
     }
     // update code bias
     if (std::find(type.begin(), type.end(), 
-        UpdateSsrType::CodeBias) != type.end()) 
+        UpdateSsrType::CodeBias) != type.end() && 
+        ssr[i].t0[4].time) 
     {
       gnss_data->ephemeris->ssr[i].t0[4] = ssr[i].t0[4];
       gnss_data->ephemeris->ssr[i].udi[4] = ssr[i].udi[4];
@@ -247,7 +278,8 @@ extern void updateSsr(
     }
     // update phase bias
     if (std::find(type.begin(), type.end(), 
-        UpdateSsrType::PhaseBias) != type.end()) 
+        UpdateSsrType::PhaseBias) != type.end() && 
+        ssr[i].t0[5].time) 
     {
       gnss_data->ephemeris->ssr[i].t0[5] = ssr[i].t0[5];
       gnss_data->ephemeris->ssr[i].udi[5] = ssr[i].udi[5];
@@ -1275,6 +1307,7 @@ int DcbFileFormator::decode(const uint8_t *buf, int size,
       for (size_t i = 0; i < codes.size(); i++) {
         if (sat <= 0 || codes[i] <= 0) continue;
         if (x(i) == 0.0) x(i) = 1e-4;
+        ephemeris->ssr[sat - 1].t0[4] = timeget();
         ephemeris->ssr[sat - 1].cbias[codes[i] - 1] = x(i);
         ephemeris->ssr[sat - 1].update = 1;
         ephemeris->ssr[sat - 1].isdcb = 1;

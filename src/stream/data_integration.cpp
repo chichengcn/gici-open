@@ -130,10 +130,7 @@ void GnssDataIntegration::handleGNSS(const std::string& formator_tag,
         { found = true; break; }
       }
       if (!found) continue;
-      memcpy(gnss_local_->ephemeris->eph, 
-        gnss->ephemeris->eph, sizeof(eph_t) * 2 * MAXSAT);
-      memcpy(gnss_local_->ephemeris->geph, 
-        gnss->ephemeris->geph, sizeof(geph_t) * 2 * NSATGLO);
+      updateEphemerides(gnss->ephemeris);
       updateTgd();
     }
 
@@ -151,7 +148,8 @@ void GnssDataIntegration::handleGNSS(const std::string& formator_tag,
           update_types.push_back(gnss_common::UpdateSsrType::PhaseBias);
         }
       }
-      gnss_common::updateSsr(gnss->ephemeris->ssr, gnss_local_, update_types);
+      gnss_common::updateSsr(
+        gnss->ephemeris->ssr, gnss_local_, update_types, false);
       for (auto it_role : roles) {
         if (it_role == GnssRole::CodeBias) updateCodeBias();
         if (it_role == GnssRole::PhaseBias) updatePhaseBias();
@@ -334,6 +332,19 @@ void GnssDataIntegration::handleGNSS(const std::string& formator_tag,
   for (auto it_gnss_callback : estimator_callbacks_) {
     EstimatorDataCluster estimator_data(epoch);
     it_gnss_callback(estimator_data);
+  }
+}
+
+// Update GNSS ephemerides to local
+void GnssDataIntegration::updateEphemerides(const nav_t *nav)
+{
+  for (int i = 0; i < 2 * MAXSAT; i++) {
+    if (nav->eph[i].sat <= 0) continue;
+    memcpy(gnss_local_->ephemeris->eph + i, nav->eph + i, sizeof(eph_t));
+  }
+  for (int i = 0; i < 2 * NSATGLO; i++) {
+    if (nav->geph[i].sat <= 0) continue;
+    memcpy(gnss_local_->ephemeris->geph + i, nav->geph + i, sizeof(geph_t));
   }
 }
 

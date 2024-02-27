@@ -158,7 +158,8 @@ enum class UpdateSsrType {
 extern void updateSsr(
   ssr_t *ssr, std::shared_ptr<DataCluster::GNSS>& gnss_data,
   std::vector<UpdateSsrType> type = {UpdateSsrType::Ephemeris, 
-  UpdateSsrType::CodeBias, UpdateSsrType::PhaseBias});
+  UpdateSsrType::CodeBias, UpdateSsrType::PhaseBias},
+  bool reset_ssr_status = true);
 
 // Select data from GNSS stream
 // Note that data except for observation are 
