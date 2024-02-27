@@ -452,7 +452,9 @@ void ImuEstimatorBase::addZUPTResidualBlock(const State& state)
     if (imu.timestamp > state.timestamp) continue;
     if (imu.timestamp < state.timestamp - imu_base_options_.zupt_duration) break;
     if (i == 0 && imu.timestamp > 
-        state.timestamp - imu_base_options_.zupt_duration) return;
+        state.timestamp - imu_base_options_.zupt_duration) {
+      imu_mutex_.unlock(); return;
+    }
     for (int j = 0; j < 3; j++) {
       acc[j].push_back(imu.linear_acceleration(j));
       gyro[j].push_back(imu.angular_velocity(j));
