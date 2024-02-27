@@ -17,20 +17,7 @@ namespace gici {
 // Construct with STD.
 NHCError::NHCError(const double std)
 {
-  const double information_xz = 1.0 / square(std);
-  information_t information_mat = Eigen::Matrix2d::Identity() * information_xz;
-  setInformation(information_mat);
-}
-
-// Set the information.
-void NHCError::setInformation(const information_t& information)
-{
-  information_ = information;
-  covariance_ = information.inverse();
-  // perform the Cholesky decomposition on order to obtain the correct error weighting
-  Eigen::LLT<information_t> lltOfInformation(information_);
-  square_root_information_ = lltOfInformation.matrixL().transpose();
-  square_root_information_inverse_ = square_root_information_.inverse();
+  attitude_std_ = std;
 }
 
 // This evaluates the error term and additionally computes the Jacobians.
@@ -62,6 +49,16 @@ bool NHCError::EvaluateWithMinimalJacobians(double const* const * parameters,
   Eigen::Vector2d error = J_lower * v_WS_S;
 
   // weigh it
+  Eigen::Matrix3d J_q_full = 
+    T_WS.getRotationMatrix().transpose() * skewSymmetric(v_WS_W);
+  Eigen::Matrix<double, 2, 3> J_q = J_lower * J_q_full;
+  Eigen::Matrix3d covariance_q = 
+    Eigen::Matrix3d::Identity() * square(attitude_std_);
+  covariance_ = J_q * covariance_q * J_q.transpose();
+  information_ = covariance_.inverse();
+  Eigen::LLT<information_t> lltOfInformation(information_);
+  square_root_information_ = lltOfInformation.matrixL().transpose();
+  square_root_information_inverse_ = square_root_information_.inverse();
   Eigen::Map<Eigen::Matrix<double, 2, 1> > weighted_error(residuals);
   weighted_error = square_root_information_ * error;
 
