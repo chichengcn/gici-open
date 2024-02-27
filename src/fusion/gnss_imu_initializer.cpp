@@ -101,7 +101,11 @@ bool GnssImuInitializer::addGnssSolutionMeasurement(
 
   // Get initial pitch, roll, and anguler rate bias under slow motion
   slowMotionInitialization();
-  if (!zero_motion_finished_) return false;
+  if (!zero_motion_finished_) {
+    if (imu_measurements_.size() > 0)
+    LOG(INFO) << "Waiting for zero motion initialization!";
+    return false;
+  }
 
   // Store measurements
   gnss_solution_measurements_.push_back(measurement);
@@ -131,7 +135,10 @@ bool GnssImuInitializer::addGnssSolutionMeasurement(
   }
 
   // Check dynamic window 
-  if (!dynamic_window_full_) return false;
+  if (!dynamic_window_full_) {
+    LOG(INFO) << "Full filling dynamic window!";
+    return false;
+  }
 
   // Check coordinate
   if (coordinate_ == nullptr) {
@@ -198,11 +205,13 @@ bool GnssImuInitializer::addGnssSolutionMeasurement(
       if (horizontal_acc > options_.min_acceleration) acc_ensured = true;
     }
   }
-  if (imu_base_options_.car_motion) {
-    if (!dynamic_window_full_) return false;
+  if (imu_base_options_.car_motion && !dynamic_window_full_) {
+    LOG(INFO) << "Waiting for sufficient velocity: " << initial_velocity.transpose();
+    return false;
   }
-  else {
-    if (!acc_ensured) return false;
+  if (!imu_base_options_.car_motion && !acc_ensured) {
+    LOG(INFO) << "Waiting for sufficient acceleration!";
+    return false;
   }
 
   // Add dynamic initialization items to graphs
