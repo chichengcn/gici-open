@@ -30,6 +30,7 @@
 #include "gici/fusion/gnss_imu_initializer.h"
 #include "gici/fusion/spp_imu_tc_estimator.h"
 #include "gici/fusion/rtk_imu_tc_estimator.h"
+#include "gici/fusion/ppp_imu_tc_estimator.h"
 #include "gici/fusion/gnss_imu_camera_srr_estimator.h"
 #include "gici/fusion/spp_imu_camera_rrr_estimator.h"
 #include "gici/fusion/rtk_imu_camera_rrr_estimator.h"
@@ -152,6 +153,7 @@ void convert<std::string, EstimatorType>
   MAP_IN_OUT("spp_imu_tc", EstimatorType::SppImuTc);
   MAP_IN_OUT("dgnss_imu_tc", EstimatorType::DgnssImuTc);
   MAP_IN_OUT("rtk_imu_tc", EstimatorType::RtkImuTc);
+  MAP_IN_OUT("ppp_imu_tc", EstimatorType::PppImuTc);
   MAP_IN_OUT("gnss_imu_camera_srr", EstimatorType::GnssImuCameraSrr);
   MAP_IN_OUT("spp_imu_camera_rrr", EstimatorType::SppImuCameraRrr);
   MAP_IN_OUT("dgnss_imu_camera_rrr", EstimatorType::DgnssImuCameraRrr);
@@ -589,6 +591,7 @@ void loadOptions<FeatureHandlerOptions>(
   LOAD_COMMON(max_pyramid_level);
   LOAD_COMMON(min_disparity_init_landmark);
   LOAD_COMMON(min_translation_init_landmark);
+  LOAD_COMMON(min_parallax_angle_init_landmark);
 
   if (checkSubOption(node, "detector")) {
     YAML::Node subnode = node["detector"];
@@ -789,6 +792,13 @@ void loadOptions<SppImuTcEstimatorOptions>(
 template <>
 void loadOptions<RtkImuTcEstimatorOptions>(
     YAML::Node& node, RtkImuTcEstimatorOptions& options)
+{
+  LOAD_COMMON(max_window_length);
+}
+
+template <>
+void loadOptions<PppImuTcEstimatorOptions>(
+    YAML::Node& node, PppImuTcEstimatorOptions& options)
 {
   LOAD_COMMON(max_window_length);
 }

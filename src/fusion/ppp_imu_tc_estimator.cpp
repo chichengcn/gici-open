@@ -1,33 +1,35 @@
 /**
-* @Function: Precise Point positioning implementation
+* @Function: PPP/IMU tightly couple estimator
 *
 * @Author  : Cheng Chi
 * @Email   : chichengcn@sjtu.edu.cn
 *
 * Copyright (C) 2023 by Cheng Chi, All rights reserved.
 **/
-#include "gici/gnss/ppp_estimator.h"
-
-#include "gici/gnss/gnss_parameter_blocks.h"
-#include "gici/gnss/gnss_common.h"
+#include "gici/fusion/ppp_imu_tc_estimator.h"
+#include "gici/fusion/gnss_imu_initializer.h"
 
 namespace gici {
 
 // The default constructor
-PppEstimator::PppEstimator(const PppEstimatorOptions& options, 
+PppImuTcEstimator::PppImuTcEstimator(
+               const PppImuTcEstimatorOptions& options, 
+               const GnssImuInitializerOptions& init_options, 
+               const PppEstimatorOptions ppp_options, 
                const GnssEstimatorBaseOptions& gnss_base_options, 
+               const GnssLooseEstimatorBaseOptions& gnss_loose_base_options, 
+               const ImuEstimatorBaseOptions& imu_base_options,
                const EstimatorBaseOptions& base_options,
                const AmbiguityResolutionOptions& ambiguity_options) :
-  ppp_options_(options), 
+  tc_options_(options), ppp_options_(ppp_options),
   GnssEstimatorBase(gnss_base_options, base_options),
+  ImuEstimatorBase(imu_base_options, base_options),
   EstimatorBase(base_options)
 {
-  type_ = EstimatorType::Ppp;
+  type_ = EstimatorType::PppImuTc;
   is_verbose_model_ = true;
   is_ppp_ = true;
   is_use_phase_ = true;
-  if (options.estimate_velocity) has_velocity_estimate_ = true;
-  can_compute_covariance_ = true;
   shiftMemory();
 
   // SPP estimator for setting initial states
@@ -41,6 +43,13 @@ PppEstimator::PppEstimator(const PppEstimatorOptions& options,
   // Ambiguity resolution
   ambiguity_resolution_.reset(new AmbiguityResolution(ambiguity_options, graph_));
 
+  // Initialization control
+  initializer_sub_estimator_.reset(new PppEstimator(
+    ppp_options, gnss_base_options, base_options, ambiguity_options));
+  initializer_.reset(new GnssImuInitializer(
+    init_options, gnss_loose_base_options, imu_base_options, 
+    base_options, graph_, initializer_sub_estimator_));
+
   // Open intermediate data logging files
   if (base_options_.log_intermediate_data) {
     const std::string& directory = base_options_.log_intermediate_data_directory;
@@ -52,7 +61,7 @@ PppEstimator::PppEstimator(const PppEstimatorOptions& options,
 }
 
 // The default destructor
-PppEstimator::~PppEstimator()
+PppImuTcEstimator::~PppImuTcEstimator()
 {
   // Close intermediate data logging files
   if (base_options_.log_intermediate_data) {
@@ -64,8 +73,30 @@ PppEstimator::~PppEstimator()
 }
 
 // Add measurement
-bool PppEstimator::addMeasurement(const EstimatorDataCluster& measurement)
+bool PppImuTcEstimator::addMeasurement(const EstimatorDataCluster& measurement)
 {
+  // Initialization
+  if (coordinate_ == nullptr || !gravity_setted_) return false;
+  if (!initializer_->finished()) {
+    if (initializer_->getCoordinate() == nullptr) {
+      initializer_->setCoordinate(coordinate_);
+      initializer_sub_estimator_->setCoordinate(coordinate_);
+      initializer_->setGravity(imu_base_options_.imu_parameters.g);
+    }
+    if (initializer_->addMeasurement(measurement)) {
+      initializer_->estimate();
+      // set result to estimator
+      setInitializationResult(initializer_);
+    }
+    return false;
+  }
+
+  // Add IMU
+  if (measurement.imu && measurement.imu_role == ImuRole::Major) {
+    addImuMeasurement(*measurement.imu);
+  }
+
+  // Add GNSS
   if (measurement.gnss && measurement.gnss_role == GnssRole::Rover) {
     return addGnssMeasurementAndState(*measurement.gnss);
   }
@@ -74,7 +105,7 @@ bool PppEstimator::addMeasurement(const EstimatorDataCluster& measurement)
 }
 
 // Add GNSS measurements and state
-bool PppEstimator::addGnssMeasurementAndState(
+bool PppImuTcEstimator::addGnssMeasurementAndState(
     const GnssMeasurement& measurement)
 {
   // Get prior states
@@ -88,7 +119,6 @@ bool PppEstimator::addGnssMeasurementAndState(
   Eigen::Vector3d velocity_prior = spp_estimator_->getVelocityEstimate();
   std::map<char, double> clock_prior = spp_estimator_->getClockEstimate();
   std::map<char, double> frequency_prior = spp_estimator_->getFrequencyEstimate();
-  curState().status = GnssSolutionStatus::Single;
 
   // Set to local measurement handle
   curGnss() = measurement;
@@ -114,14 +144,17 @@ bool PppEstimator::addGnssMeasurementAndState(
   if (!isFirstEpoch()) {
     cycleSlipDetection(lastGnss(), curGnss(), gnss_base_options_.common);
   }
-  
+
   // Add parameter blocks
-  double timestamp = measurement.timestamp;
-  curState().timestamp = timestamp;
-  // position block
-  BackendId position_id = addGnssPositionParameterBlock(curGnss().id, position_prior);
-  curState().id = position_id;
-  curState().id_in_graph = position_id;
+  double timestamp = curGnss().timestamp;
+  // pose and speed and bias block
+  const int32_t bundle_id = curGnss().id;
+  BackendId pose_id = createGnssPoseId(bundle_id);
+  size_t index = insertImuState(timestamp, pose_id);
+  CHECK(index == states_.size() - 1);
+  curState().status = GnssSolutionStatus::Single;
+  // GNSS extrinsics, it should be added at initialization step
+  CHECK(gnss_extrinsics_id_.valid());
   // clock block
   int num_valid_system = 0;
   addClockParameterBlocks(curGnss(), curGnss().id, num_valid_system, clock_prior);
@@ -133,66 +166,52 @@ bool PppEstimator::addGnssMeasurementAndState(
   addAmbiguityParameterBlocks(curGnss(), curGnss().id, curAmbiguityState());
   // inter-frequency bias (IFB) blocks
   addIfbParameterBlocks(curGnss(), curGnss().id);
-  if (ppp_options_.estimate_velocity) {
-    // velocity block
-    addGnssVelocityParameterBlock(curGnss().id, velocity_prior);
-    // frequency block
-    int num_valid_doppler_system = 0;
-    addFrequencyParameterBlocks(curGnss(), curGnss().id, 
-      num_valid_doppler_system, frequency_prior);
-  }
+  // frequency block
+  int num_valid_doppler_system = 0;
+  addFrequencyParameterBlocks(curGnss(), curGnss().id, 
+    num_valid_doppler_system, frequency_prior);
 
   // Add pseudorange residual blocks
   int num_valid_satellite = 0;
   addPseudorangeResidualBlocks(curGnss(), curState(), num_valid_satellite);
-
-  // Check if insufficient satellites
+  
+  // We do not need to check if the number of satellites is sufficient in tightly fusion.
   if (!checkSufficientSatellite(num_valid_satellite, num_valid_system)) {
+    // do nothing
+  }
+  num_satellites_ = num_valid_satellite;
+
+  // No satellite
+  if (num_satellites_ == 0) {
     // erase parameters in current state
-    eraseGnssPositionParameterBlock(curState());
+    eraseImuState(curState());
     eraseClockParameterBlocks(curState());
     eraseTroposphereParameterBlock(curState());
     eraseIonosphereParameterBlocks(curIonosphereState());
     eraseAmbiguityParameterBlocks(curAmbiguityState());
-    if (ppp_options_.estimate_velocity) {
-      eraseGnssVelocityParameterBlock(curState());
-      eraseFrequencyParameterBlocks(curState());
-    }
+    eraseFrequencyParameterBlocks(curState());
 
     return false;
   }
-  num_satellites_ = num_valid_satellite;
 
   // Add phaserange residual blocks
   addPhaserangeResidualBlocks(curGnss(), curState());
 
   // Add doppler residual blocks
-  if (ppp_options_.estimate_velocity) {
-    addDopplerResidualBlocks(curGnss(), curState(), num_valid_satellite);
-  }
+  addDopplerResidualBlocks(curGnss(), curState(), num_valid_satellite);
 
   // Add position and velocity prior constraints
   if (isFirstEpoch()) {
     addGnssPositionResidualBlock(curState(), 
       position_prior, gnss_base_options_.error_parameter.initial_position);
-    if (ppp_options_.estimate_velocity) {
-      addGnssVelocityResidualBlock(curState(), 
-        velocity_prior, gnss_base_options_.error_parameter.initial_velocity);
-    }
+    addGnssVelocityResidualBlock(curState(), 
+      velocity_prior, gnss_base_options_.error_parameter.initial_velocity);
   }
 
   // Add relative errors
   if (!isFirstEpoch()) {
-    if (!ppp_options_.estimate_velocity) {
-      // position
-      addRelativePositionResidualBlock(lastState(), curState());
-    }
-    else {
-      // position and velocity
-      addRelativePositionAndVelocityResidualBlock(lastState(), curState());
-      // frequency
-      addRelativeFrequencyResidualBlock(lastState(), curState());
-    }
+    // frequency
+    addRelativeFrequencyResidualBlock(lastState(), curState());
     // isb
     // addRelativeIsbResidualBlock(lastState(), curState());
     // troposphere
@@ -205,11 +224,22 @@ bool PppEstimator::addGnssMeasurementAndState(
       lastGnss(), curGnss(), lastAmbiguityState(), curAmbiguityState());
   }
 
+  // ZUPT
+  addZUPTResidualBlock(curState());
+
+  // Car motion
+  if (imu_base_options_.car_motion) {
+    // heading measurement constraint
+    addHMCResidualBlock(curState());
+    // non-holonomic constraint
+    addNHCResidualBlock(curState());
+  }
+
   return true;
 }
 
 // Solve current graph
-bool PppEstimator::estimate()
+bool PppImuTcEstimator::estimate()
 {
   // Optimize with FDE
   size_t n_pseudorange = numPseudorangeError(curState());
@@ -224,7 +254,7 @@ bool PppEstimator::estimate()
     if (!rejectPseudorangeOutlier(curState(), curAmbiguityState(),
         gnss_base_options_.reject_one_outlier_once) && 
         !rejectDopplerOutlier(curState(), 
-        gnss_base_options_.reject_one_outlier_once) && 
+        gnss_base_options_.reject_one_outlier_once) &&
         !rejectPhaserangeOutlier(curState(), curAmbiguityState(),
         gnss_base_options_.reject_one_outlier_once)) break;
     if (!gnss_base_options_.reject_one_outlier_once) break;  
@@ -234,7 +264,7 @@ bool PppEstimator::estimate()
     optimize();
   }
 
-  // Check if we rejected too many residuals
+  // Check if we rejected too many GNSS residuals
   double ratio_pseudorange = n_pseudorange == 0.0 ? 0.0 : 1.0 - 
     getDivide(numPseudorangeError(curState()), n_pseudorange);
   double ratio_phaserange = n_phaserange == 0.0 ? 0.0 : 1.0 - 
@@ -249,7 +279,7 @@ bool PppEstimator::estimate()
   else num_cotinuous_reject_gnss_ = 0;
   if (num_cotinuous_reject_gnss_ > 
       gnss_base_options_.diverge_min_num_continuous_reject) {
-    LOG(WARNING) << "Estimator diverge: Too many outliers rejected!";
+    LOG(WARNING) << "Estimator diverge: Too many GNSS outliers rejected!";
     status_ = EstimatorStatus::Diverged;
     num_cotinuous_reject_gnss_ = 0;
   }
@@ -269,6 +299,23 @@ bool PppEstimator::estimate()
       curState().id, curAmbiguityState().ids, ambiguity_covariance, curGnss());
     if (ret == AmbiguityResolution::Result::NlFix) {
       curState().status = GnssSolutionStatus::Fixed;
+    }
+  }
+
+  // Check if we continuously cannot fix ambiguity, while we have good observations
+  if (ppp_options_.use_ambiguity_resolution) {
+    const double thr = gnss_base_options_.good_observation_max_reject_ratio;
+    if (isGnssGoodObservation() && ratio_pseudorange < thr && 
+        ratio_phaserange < thr && ratio_doppler < thr) {
+      if (curState().status != GnssSolutionStatus::Fixed) num_continuous_unfix_++;
+      else num_continuous_unfix_ = 0; 
+    }
+    else num_continuous_unfix_ = 0;
+    if (num_continuous_unfix_ > 
+        gnss_base_options_.reset_ambiguity_min_num_continuous_unfix) {
+      LOG(INFO) << "Continuously unfix under good observations. Clear current ambiguities.";
+      resetAmbiguityEstimation();
+      num_continuous_unfix_ = 0;
     }
   }
 
@@ -292,21 +339,45 @@ bool PppEstimator::estimate()
   return true;
 }
 
-// Log intermediate data
-void PppEstimator::logIntermediateData()
+// Set initializatin result
+void PppImuTcEstimator::setInitializationResult(
+  const std::shared_ptr<MultisensorInitializerBase>& initializer)
 {
-  if (!base_options_.log_intermediate_data) return;
-  logAmbiguityEstimate();
-  logIonosphereEstimate();
-  logPseudorangeResidual();
-  logPhaserangeResidual();
+  CHECK(initializer->finished());
+
+  // Cast to desired initializer
+  std::shared_ptr<GnssImuInitializer> gnss_imu_initializer = 
+    std::static_pointer_cast<GnssImuInitializer>(initializer);
+  CHECK_NOTNULL(gnss_imu_initializer);
+  
+  // Arrange to window length
+  ImuMeasurements imu_measurements;
+  std::deque<GnssSolution> gnss_solution_measurements;
+  gnss_imu_initializer->arrangeToEstimator(
+    tc_options_.max_window_length, marginalization_error_, states_, 
+    marginalization_residual_id_, gnss_extrinsics_id_, 
+    gnss_solution_measurements, imu_measurements);
+  for (auto it = imu_measurements.rbegin(); it != imu_measurements.rend(); it++) {
+    imu_mutex_.lock();
+    imu_measurements_.push_front(*it);
+    imu_mutex_.unlock();
+  }
+  gnss_measurements_.resize(gnss_solution_measurements.size());
+  ambiguity_states_.resize(states_.size());
+  ionosphere_states_.resize(states_.size());
+
+  // Shift memory for states and measurements
+  shiftMemory();
+
+  // Set flags
+  can_compute_covariance_ = true;
 }
 
 // Marginalization
-bool PppEstimator::marginalization()
+bool PppImuTcEstimator::marginalization()
 {
   // Check if we need marginalization
-  if (states_.size() < ppp_options_.max_window_length) {
+  if (states_.size() < tc_options_.max_window_length) {
     return true;
   }
 
@@ -314,8 +385,8 @@ bool PppEstimator::marginalization()
   if (!eraseOldMarginalization()) return false;
 
   // Add marginalization items
-  // position
-  addGnssPositionMarginBlockWithResiduals(oldestState());
+  // IMU states and residuals
+  addImuStateMarginBlockWithResiduals(oldestState());
   // clock
   addClockMarginBlocksWithResiduals(oldestState());
   // troposphere
@@ -324,12 +395,8 @@ bool PppEstimator::marginalization()
   addIonosphereMarginBlocksWithResiduals(oldestIonosphereState());
   // ambiguity
   addAmbiguityMarginBlocksWithResiduals(oldestAmbiguityState());
-  if (ppp_options_.estimate_velocity) {
-    // velocity
-    addGnssVelocityMarginBlockWithResiduals(oldestState());
-    // frequency
-    addFrequencyMarginBlocksWithResiduals(oldestState());
-  }
+  // frequency
+  addFrequencyMarginBlocksWithResiduals(oldestState());
 
   // Apply marginalization and add the item into graph
   return applyMarginalization();

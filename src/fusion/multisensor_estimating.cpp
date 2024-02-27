@@ -205,6 +205,36 @@ MultiSensorEstimating::MultiSensorEstimating(
       rtk_imu_tc_options_, gnss_imu_init_options_, rtk_options_, gnss_base_options_, 
       gnss_loose_base_options_, imu_base_options_, base_options_, ambiguity_options_));
   }
+  // PPP/IMU tightly couple
+  else if (type_ == EstimatorType::PppImuTc)
+  {
+    YAML::Node ppp_imu_tc_node = node["ppp_imu_tc_options"];
+    if (ppp_imu_tc_node.IsDefined()) {
+      option_tools::loadOptions(ppp_imu_tc_node, ppp_imu_tc_options_);
+    }
+    YAML::Node ppp_node = node["ppp_options"];
+    if (ppp_node.IsDefined()) {
+      option_tools::loadOptions(ppp_node, ppp_options_);
+    }
+    YAML::Node gnss_imu_init_node = node["gnss_imu_initializer_options"];
+    if (gnss_imu_init_node.IsDefined()) {
+      option_tools::loadOptions(gnss_imu_init_node, gnss_imu_init_options_);
+    }
+    YAML::Node ambiguity_node = node["ambiguity_resolution_options"];
+    if (ambiguity_node.IsDefined()) {
+      option_tools::loadOptions(ambiguity_node, ambiguity_options_);
+    }
+
+    // rotate estrinsics
+    gnss_imu_init_options_.gnss_extrinsics = ImuEstimatorBase::rotateImuToBody(
+      gnss_imu_init_options_.gnss_extrinsics, imu_base_options_);
+    gnss_imu_init_options_.gnss_extrinsics_initial_std = ImuEstimatorBase::rotateImuToBody(
+      gnss_imu_init_options_.gnss_extrinsics_initial_std, imu_base_options_);
+
+    estimator_.reset(new PppImuTcEstimator(
+      ppp_imu_tc_options_, gnss_imu_init_options_, ppp_options_, gnss_base_options_, 
+      gnss_loose_base_options_, imu_base_options_, base_options_, ambiguity_options_));
+  }
   // GNSS/IMU/Camera semi-tightly integration
   else if (type_ == EstimatorType::GnssImuCameraSrr)
   {
@@ -395,6 +425,13 @@ void MultiSensorEstimating::resetProcessors()
   {
     estimator_.reset(new RtkImuTcEstimator(
       rtk_imu_tc_options_, gnss_imu_init_options_, rtk_options_, gnss_base_options_, 
+      gnss_loose_base_options_, imu_base_options_, base_options_, ambiguity_options_));
+  }
+  // PPP/IMU tightly couple
+  else if (type_ == EstimatorType::PppImuTc)
+  {
+    estimator_.reset(new PppImuTcEstimator(
+      ppp_imu_tc_options_, gnss_imu_init_options_, ppp_options_, gnss_base_options_, 
       gnss_loose_base_options_, imu_base_options_, base_options_, ambiguity_options_));
   }
   // GNSS/IMU/Camera semi-tightly integration

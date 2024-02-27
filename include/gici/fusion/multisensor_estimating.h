@@ -26,6 +26,7 @@
 #include "gici/fusion/gnss_imu_lc_estimator.h"
 #include "gici/fusion/spp_imu_tc_estimator.h"
 #include "gici/fusion/rtk_imu_tc_estimator.h"
+#include "gici/fusion/ppp_imu_tc_estimator.h"
 #include "gici/fusion/gnss_imu_camera_srr_estimator.h"
 #include "gici/fusion/spp_imu_camera_rrr_estimator.h"
 #include "gici/fusion/rtk_imu_camera_rrr_estimator.h"
@@ -210,6 +211,7 @@ protected:
   GnssImuInitializerOptions gnss_imu_init_options_;
   SppImuTcEstimatorOptions spp_imu_tc_options_;
   RtkImuTcEstimatorOptions rtk_imu_tc_options_;
+  PppImuTcEstimatorOptions ppp_imu_tc_options_;
   GnssImuCameraSrrEstimatorOptions gnss_imu_camera_srr_options_;
   SppImuCameraRrrEstimatorOptions spp_imu_camera_rrr_options_;
   RtkImuCameraRrrEstimatorOptions rtk_imu_camera_rrr_options_;
