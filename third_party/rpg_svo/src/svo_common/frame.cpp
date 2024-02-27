@@ -424,7 +424,7 @@ bool getSceneDepth(const FramePtr& frame, double& depth_median, double& depth_mi
   return true;
 }
 
-void computeNormalizedBearingVectors(
+void computeBearingVectors(
     const Keypoints& px_vec,
     const Camera& cam,
     Bearings* f_vec)
@@ -435,6 +435,14 @@ void computeNormalizedBearingVectors(
   for (const bool s : success) {
     CHECK(s);
   }
+}
+
+void computeNormalizedBearingVectors(
+    const Keypoints& px_vec,
+    const Camera& cam,
+    Bearings* f_vec)
+{
+  computeBearingVectors(px_vec, cam, f_vec);
   *f_vec = f_vec->array().rowwise() / f_vec->colwise().norm().array();
 }
 

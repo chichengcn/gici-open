@@ -111,7 +111,7 @@ void AbstractVisualInitialization::newRefFrames(const FrameBundlePtr& frames)
     detector_->detect(
           frame->img_pyr_, frame->getMask(), max_n_features, new_px, new_scores,
           new_levels, new_grads, new_types);
-    frame_utils::computeNormalizedBearingVectors(new_px, *frame->cam(), &new_f);
+    frame_utils::computeBearingVectors(new_px, *frame->cam(), &new_f);
 
     // Add features to frame.
     const size_t n_old = frame->num_features_;

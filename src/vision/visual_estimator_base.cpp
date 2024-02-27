@@ -524,6 +524,7 @@ void VisualEstimatorBase::updateLandmarks()
         std::static_pointer_cast<HomogeneousPointParameterBlock>(
           graph_->parameterBlockPtr(
             id_and_map_point.first.asInteger()))->estimate();
+    CHECK(id_and_map_point.second.hom_coordinates(3) == 1.0);
     // update map points to frontend
     id_and_map_point.second.point->pos_=
         id_and_map_point.second.hom_coordinates.head<3>();

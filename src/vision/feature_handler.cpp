@@ -251,7 +251,7 @@ void FeatureHandler::detectFeatures(const FramePtr& frame)
         frame->img_pyr_, frame->getMask(), max_n_features, new_px, new_scores,
         new_levels, new_grads, new_types);
 
-  frame_utils::computeNormalizedBearingVectors(new_px, *frame->cam(), &new_f);
+  frame_utils::computeBearingVectors(new_px, *frame->cam(), &new_f);
 
   // Add features to frame.
   mutex_.lock();
@@ -285,6 +285,7 @@ void FeatureHandler::trackFeatures()
     Transformation T_WC_ref = lastFrame()->T_world_cam();
     Transformation T_WC_cur = curFrame()->T_world_cam();
     q_cur_ref = (T_WC_cur.inverse() * T_WC_ref).getEigenQuaternion();
+    has_rotation_prior = true;
   }
 
   if (has_rotation_prior) {
@@ -529,19 +530,24 @@ void FeatureHandler::initializeLandmarks(const FramePtr& keyframe)
 
     Transformation T_cur_ref = frame->T_f_w_ * ref_frame->T_f_w_.inverse();
 
-    // avoid pure rotation
-    if (T_cur_ref.getPosition().norm() < 
-        options_.min_translation_init_landmark) continue;
-    
+    // check translation
+    if (T_cur_ref.getPosition().norm() < options_.min_translation_init_landmark) continue;
+
+    // check parallax angle
     BearingVector f_ref = ref_frame->f_vec_.col(index_ref);
     BearingVector f_cur = frame->f_vec_.col(i);
+    BearingVector f_ref_rot = T_cur_ref.getRotation().rotate(f_ref);
+    double angle = acos(f_ref_rot.dot(f_cur) / (f_ref_rot.norm() * f_cur.norm())) * R2D;
+    if (angle < options_.min_parallax_angle_init_landmark) continue;
+    
+    // apply traingulation
     double depth;
     if (!(depthFromTriangulation(T_cur_ref, f_ref, f_cur, &depth) 
         == FeatureMatcher::MatchResult::kSuccess)) continue;
     if (depth < 0.1) continue;
     // Note that the follow equation should not be T * f_ref * depth.
     // Because the operater "*" is applied in homogeneous coordinate
-    landmark->pos_ = ref_frame->T_world_cam() * (f_ref / f_ref(2) * depth);
+    landmark->pos_ = ref_frame->T_world_cam() * (f_ref * depth);
 
     // Change feature type
     for (auto obs : landmark->obs_) {

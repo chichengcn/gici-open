@@ -123,7 +123,7 @@ void FeatureTracker::track(const FramePtr& ref_frame,
       grid.setOccupied(grid_index);
     }
   }
-  frame_utils::computeNormalizedBearingVectors(
+  frame_utils::computeBearingVectors(
     cur_frame->px_vec_, *cur_frame->cam(), &cur_frame->f_vec_);
 }
 

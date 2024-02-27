@@ -567,5 +567,10 @@ void computeNormalizedBearingVectors(
     const Camera& cam,
     Bearings* f_vec);
 
+void computeBearingVectors(
+    const Keypoints& px_vec,
+    const Camera& cam,
+    Bearings* f_vec);
+
 } // namespace frame_utils
 } // namespace svo

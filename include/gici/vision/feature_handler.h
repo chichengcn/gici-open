@@ -53,6 +53,9 @@ struct FeatureHandlerOptions {
   // Minimum translation to triangulate a landmark
   double min_translation_init_landmark = 0.2;
 
+  // Minimum parallax angle to triangulate landmark (deg)
+  double min_parallax_angle_init_landmark = 5.0;
+
   // Feature detector options
   DetectorOptions detector;
 
