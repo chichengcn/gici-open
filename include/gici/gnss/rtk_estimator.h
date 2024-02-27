@@ -46,6 +46,9 @@ public:
   // Estimate current graph
   bool estimate() override;
 
+  // Log intermediate data
+  void logIntermediateData() override;
+
   // Get state que
   const State getState() { return getLast(states_); }
 
