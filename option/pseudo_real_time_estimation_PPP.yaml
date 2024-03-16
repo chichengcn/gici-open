@@ -79,6 +79,7 @@ estimate:
     fmt_gnss_rov_roles: [rover]
     fmt_gnss_eph_roles: [ephemeris]
     fmt_gnss_ssr_roles: [ssr_ephemeris]
+    # fmt_gnss_ssr_roles: [ssr_ephemeris, code_bias]
     fmt_dcb_file_roles: [code_bias]
     fmt_gnss_atx_roles: [phase_center]
     output_tags: [fmt_solution_file]
@@ -93,7 +94,7 @@ estimate:
       max_pesudorange_error: 4.0
       max_phaserange_error: 0.03
       gnss_error_parameter:
-        code_to_phase_ratio: 1000.0
+        code_to_phase_ratio: 500.0
       gnss_common:
         min_elevation: 12.0
         min_SNR: [30.0, 30.0]
