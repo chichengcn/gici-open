@@ -122,7 +122,8 @@ protected:
     const GnssMeasurement& measurement, 
     const int32_t id, 
     int& num_valid_system,
-    const std::map<char, double>& prior = std::map<char, double>());
+    const std::map<char, double>& prior = std::map<char, double>(), 
+    bool use_single_frequency = false);
 
   // Add clock blocks to graph for single differenced measurements
   void addSdClockParameterBlocks(
@@ -146,7 +147,8 @@ protected:
     const GnssMeasurement& measurement, 
     const int32_t id, 
     int& num_valid_system, 
-    const std::map<char, double>& prior = std::map<char, double>());
+    const std::map<char, double>& prior = std::map<char, double>(), 
+    bool use_single_frequency = false);
 
   // Add troposphere block to graph
   void addTroposphereParameterBlock(const int32_t id);

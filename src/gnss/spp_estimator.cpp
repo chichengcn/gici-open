@@ -125,7 +125,8 @@ bool SppEstimator::addGnssMeasurementAndState(
   curState().id_in_graph = position_id;
   // clock block
   int num_valid_system = 0;
-  addClockParameterBlocks(curGnss(), curGnss().id, num_valid_system);
+  addClockParameterBlocks(curGnss(), curGnss().id, num_valid_system, 
+    std::map<char, double>(), true);
   
   // Add pseudorange residual blocks
   int num_valid_satellite = 0;
@@ -225,7 +226,8 @@ bool SppEstimator::estimate()
     // velocity block
     addGnssVelocityParameterBlock(curGnss().id);
     // frequency block
-    addFrequencyParameterBlocks(curGnss(), curGnss().id, num_valid_doppler_system);
+    addFrequencyParameterBlocks(curGnss(), curGnss().id, num_valid_doppler_system, 
+      std::map<char, double>(), true);
 
     // Add doppler residual blocks
     int num_valid_doppler_satellite = 0;

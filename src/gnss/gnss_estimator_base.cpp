@@ -76,7 +76,8 @@ BackendId GnssEstimatorBase::addGnssExtrinsicsParameterBlock(
 void GnssEstimatorBase::addClockParameterBlocks(
   const GnssMeasurement& measurement, 
   const int32_t id, int& num_valid_system,
-  const std::map<char, double>& prior)
+  const std::map<char, double>& prior, 
+  bool use_single_frequency)
 {
   // Add clock parameter for each system
   for (size_t i = 0; i < getGnssSystemList().size(); i++) 
@@ -102,14 +103,53 @@ void GnssEstimatorBase::addClockParameterBlocks(
     if (!gnss_common::useSystem(gnss_base_options_.common, system)) continue;
     system_observation_cnt.insert(std::make_pair(system, 0));
   }
-  for (auto& sat : measurement.satellites) 
+  // none precise mode. 
+  if (!is_verbose_model_) 
   {
-    auto& satellite = sat.second;
-    char system = satellite.getSystem();
-    if (!gnss_common::useSystem(gnss_base_options_.common, system)) continue;
-    for (auto obs : satellite.observations) {
-      if (checkObservationValid(measurement, 
-          GnssMeasurementIndex(satellite.prn, obs.first))) {
+    for (auto& sat : measurement.satellites) 
+    {
+      // check satellites
+      auto& satellite = sat.second;
+      char system = satellite.getSystem();
+      if (!gnss_common::useSystem(gnss_base_options_.common, system) || 
+          !gnss_common::useSatellite(gnss_base_options_.common, satellite.prn)) continue;
+      if (satellite.ionosphere_type == IonoType::None) continue;
+
+      // check observations
+      for (auto obs : satellite.observations) {
+        if (!checkObservationValid(measurement, 
+            GnssMeasurementIndex(satellite.prn, obs.first))) continue;
+
+        // check single frequency
+        if (use_single_frequency) {
+          CodeBias::BaseFrequencies bases = measurement.code_bias->getBase();
+          std::pair<int, int> base_pair = bases.at(system);
+          if (system == 'C') base_pair.first = CODE_L2I;  // use B1I for BDS
+          int phase_id_base = gnss_common::getPhaseID(system, base_pair.first);
+          int phase_id = gnss_common::getPhaseID(system, obs.first);
+          if (phase_id_base != phase_id) continue;
+        }
+
+        system_observation_cnt.at(system)++;
+      }
+    }
+  }
+  // precise mode.
+  else 
+  {
+    for (auto& sat : measurement.satellites) 
+    {
+      // check satellites
+      auto& satellite = sat.second;
+      char system = satellite.getSystem();
+      if (!gnss_common::useSystem(gnss_base_options_.common, system) || 
+          !gnss_common::useSatellite(gnss_base_options_.common, satellite.prn)) continue;
+      if (satellite.ionosphere_type == IonoType::None) continue;
+
+      // check observations
+      for (auto obs : satellite.observations) {
+        if (!checkObservationValid(measurement, 
+            GnssMeasurementIndex(satellite.prn, obs.first))) continue;
         system_observation_cnt.at(system)++;
       }
     }
@@ -231,7 +271,8 @@ void GnssEstimatorBase::addFrequencyParameterBlocks(
   const GnssMeasurement& measurement, 
   const int32_t id, 
   int& num_valid_system,
-  const std::map<char, double>& prior)
+  const std::map<char, double>& prior, 
+  bool use_single_frequency)
 {
   // Add frequency parameter for each system
   for (size_t i = 0; i < getGnssSystemList().size(); i++) 
@@ -257,19 +298,32 @@ void GnssEstimatorBase::addFrequencyParameterBlocks(
     if (!gnss_common::useSystem(gnss_base_options_.common, system)) continue;
     system_observation_cnt.insert(std::make_pair(system, 0));
   }
+  // check satellites
   for (auto& sat : measurement.satellites) 
   {
     auto& satellite = sat.second;
     char system = satellite.getSystem();
-    if (!gnss_common::useSystem(gnss_base_options_.common, system)) continue;
+    if (!gnss_common::useSystem(gnss_base_options_.common, system) || 
+        !gnss_common::useSatellite(gnss_base_options_.common, satellite.prn)) continue;
+    
+    // check observations
     for (auto obs : satellite.observations) {
       const Observation& observation = 
         measurement.getObs(GnssMeasurementIndex(satellite.prn, obs.first));
-      if (checkObservationValid(measurement, 
-          GnssMeasurementIndex(satellite.prn, obs.first), true) && 
-          !observation.slip) {
-        system_observation_cnt.at(system)++;
+      if (!checkObservationValid(measurement, 
+        GnssMeasurementIndex(satellite.prn, obs.first), true)) continue;
+
+      // check single frequency
+      if (use_single_frequency) {
+        CodeBias::BaseFrequencies bases = measurement.code_bias->getBase();
+        std::pair<int, int> base_pair = bases.at(system);
+        if (system == 'C') base_pair.first = CODE_L2I;  // use B1I for BDS
+        int phase_id_base = gnss_common::getPhaseID(system, base_pair.first);
+        int phase_id = gnss_common::getPhaseID(system, obs.first);
+        if (phase_id_base != phase_id) continue;
       }
+
+      system_observation_cnt.at(system)++;
     }
   }
 

@@ -114,10 +114,12 @@ bool SppImuCameraRrrEstimator::addGnssMeasurementAndState(
   CHECK(gnss_extrinsics_id_.valid());
   // clock block
   int num_valid_system = 0;
-  addClockParameterBlocks(curGnss(), curGnss().id, num_valid_system);
+  addClockParameterBlocks(curGnss(), curGnss().id, num_valid_system, 
+    std::map<char, double>(), true);
   // frequency block
   int num_valid_doppler_system = 0;
-  addFrequencyParameterBlocks(curGnss(), curGnss().id, num_valid_doppler_system);
+  addFrequencyParameterBlocks(curGnss(), curGnss().id, num_valid_doppler_system, 
+    std::map<char, double>(), true);
 
   // Add pseudorange residual blocks
   int num_valid_satellite = 0;
