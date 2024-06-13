@@ -26,6 +26,7 @@ enum class FormatorType {
   RTCM2, 
   RTCM3,
   GnssRaw, 
+  RINEX, 
   ImageV4L2,
   ImagePack,  
   IMUPack,
@@ -126,6 +127,7 @@ struct MaxDataSize {
   static const int RTCM2 = 30;
   static const int RTCM3 = RTCM2;
   static const int GnssRaw = RTCM2;
+  static const int RINEX = RTCM2;
   static const int ImagePack = 2;
   static const int IMUPack = 500;
 };
@@ -261,6 +263,32 @@ public:
 protected:
   raw_t raw_;
   GnssRawFormats format_;
+};
+
+// GNSS Rinex
+class RINEXFormator : public FormatorBase {
+public:
+  struct Option {
+    int buffer_length = 32768;
+  };
+
+  RINEXFormator(Option& option);
+  RINEXFormator(YAML::Node& node);
+  ~RINEXFormator();
+
+  // Decode stream to data
+  int decode(const uint8_t *buf, int size, 
+    std::vector<std::shared_ptr<DataCluster>>& data) override;
+
+  // Encode data to stream
+  int encode(const std::shared_ptr<DataCluster>& data, uint8_t *buf) override;
+
+protected:
+  rnxctr_t rnx_;
+  bool header_decoded_ = false;
+  std::string line_;
+  char *buf_memory_, *p_memory_;
+  FILE *fp_memory_;
 };
 
 // Image V4L2
@@ -474,6 +502,7 @@ inline std::shared_ptr<FormatorBase> makeFormator( \
 MAKE_FORMATOR(RTCM2Formator);
 MAKE_FORMATOR(RTCM3Formator);
 MAKE_FORMATOR(GnssRawFormator);
+MAKE_FORMATOR(RINEXFormator);
 MAKE_FORMATOR(ImageV4L2Formator);
 MAKE_FORMATOR(ImagePackFormator);
 MAKE_FORMATOR(IMUPackFormator);

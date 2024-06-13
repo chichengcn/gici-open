@@ -8,7 +8,7 @@ link_libraries(m dl rt)
 
 # Add third-party libraries
 # RTKLIB
-add_definitions(-DENAGLO -DENACMP -DENAGAL -DNFREQ=3 -DNEXOBS=3 -DDLL)
+add_definitions(-DENAGLO -DENACMP -DENAGAL -DENAQZS -DENAIRN -DNFREQ=3 -DNEXOBS=3 -DDLL)
 add_subdirectory(../../../third_party/rtklib rtklib.out)
 
 include_directories(

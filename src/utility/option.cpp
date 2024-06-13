@@ -73,6 +73,7 @@ void convert<std::string, FormatorType>
   MAP_IN_OUT("gnss-rtcm-2", FormatorType::RTCM2);
   MAP_IN_OUT("gnss-rtcm-3", FormatorType::RTCM3);
   MAP_IN_OUT("gnss-raw", FormatorType::GnssRaw);
+  MAP_IN_OUT("gnss-rinex", FormatorType::RINEX);
   MAP_IN_OUT("image-v4l2", FormatorType::ImageV4L2);
   MAP_IN_OUT("image-pack", FormatorType::ImagePack);
   MAP_IN_OUT("imu-pack", FormatorType::IMUPack);

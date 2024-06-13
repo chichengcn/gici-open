@@ -90,6 +90,7 @@ int main(int argc, char** argv)
           << " (" << nobs << ")";
       }
       double timestamp = getTimestamp(dataset[nobs - 1], client_node);
+      if (timestamp == 0.0) continue;
       
       // header
       if (!printed_header) {
@@ -153,6 +154,7 @@ int main(int argc, char** argv)
           << " (" << nobs << ")";
       }
       double timestamp = getTimestamp(dataset[nobs - 1], client_node);
+      if (timestamp == 0.0) continue;
 
       double dt = timestamp - start_timestamp;
       if (dt < 0.0) dt = 0.0;
@@ -168,6 +170,10 @@ int main(int argc, char** argv)
         fwrite(&fpos_8B,1,sizeof(fpos_8B),file_client->fp_tag);
       }
       fflush(file_client->fp_tag);
+
+      static uint32_t last_tick = 1;
+      if (tick != last_tick) std::cout << "Generated tick at " << tick << std::endl;
+      last_tick = tick;
     }
   }
 

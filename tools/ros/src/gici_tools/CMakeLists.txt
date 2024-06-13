@@ -47,7 +47,7 @@ catkin_package(
 )
 
 # Add definitions here to ensure correct memory allocation in RTKLIB
-add_definitions(-DENAGLO -DENACMP -DENAGAL -DNFREQ=3 -DNEXOBS=3 -DDLL)
+add_definitions(-DENAGLO -DENACMP -DENAGAL -DENAQZS -DENAIRN -DNFREQ=3 -DNEXOBS=3 -DDLL)
 
 # Sources
 aux_source_directory(src/ros_utility DIR_UTILITIES)

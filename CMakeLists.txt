@@ -31,7 +31,7 @@ add_subdirectory(third_party/rpg_vikit/vikit_common)
 # SVO libraries
 add_subdirectory(third_party/rpg_svo)
 # RTKLIB
-add_definitions(-DENAGLO -DENACMP -DENAGAL -DNFREQ=3 -DNEXOBS=3 -DDLL)
+add_definitions(-DENAGLO -DENACMP -DENAGAL -DENAQZS -DENAIRN -DNFREQ=3 -DNEXOBS=3 -DDLL)
 add_subdirectory(third_party/rtklib)
 
 include_directories(

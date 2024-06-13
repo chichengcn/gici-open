@@ -107,7 +107,7 @@ int getProperBufLength(const YAML::Node& node)
   
   // large value may cause latency, small value may cause jamming.
   if (type == FormatorType::RTCM2 || type == FormatorType::RTCM3 
-   || type == FormatorType::GnssRaw) {
+   || type == FormatorType::GnssRaw || type == FormatorType::RINEX) {
     return 32;
   }
   else if (type == FormatorType::ImagePack) {
@@ -149,8 +149,9 @@ double getTimestamp(const std::shared_ptr<DataCluster>& data, const YAML::Node& 
           char system = prn_buf[0];
           switch (system) {
             case 'G': t_utc = timeadd(t_utc, -7200.0); break;
-            case 'E': t_utc = timeadd(t_utc, -600.0); break;
-            case 'C': t_utc = timeadd(t_utc, -3600.0); break;
+            case 'R': t_utc = timeadd(t_utc, -1800.0); break;
+            case 'E': t_utc = timeadd(t_utc, 0.0); break;
+            case 'C': t_utc = timeadd(t_utc, 0.0); break;
             default: t_utc.time = 0.0; t_utc.sec = 0.0;
           }
           SET_TIMESTAMP(gnss_common::gtimeToDouble(t_utc));
