@@ -14,6 +14,7 @@
 #include <sys/mman.h>
 #include <linux/videodev2.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 namespace gici {
 
