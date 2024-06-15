@@ -144,8 +144,8 @@ bool RtkImuTcEstimator::addGnssMeasurementAndState(
   if (num_satellites_ == 0) {
     // erase parameters in current state
     eraseFrequencyParameterBlocks(curState());
-    eraseImuState(curState());
     eraseAmbiguityParameterBlocks(curAmbiguityState());
+    eraseImuState(curState());
     return false;
   }
 

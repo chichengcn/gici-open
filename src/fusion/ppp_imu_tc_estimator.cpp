@@ -184,12 +184,12 @@ bool PppImuTcEstimator::addGnssMeasurementAndState(
   // No satellite
   if (num_satellites_ == 0) {
     // erase parameters in current state
-    eraseImuState(curState());
     eraseClockParameterBlocks(curState());
     eraseTroposphereParameterBlock(curState());
     eraseIonosphereParameterBlocks(curIonosphereState());
     eraseAmbiguityParameterBlocks(curAmbiguityState());
     eraseFrequencyParameterBlocks(curState());
+    eraseImuState(curState());
 
     return false;
   }
