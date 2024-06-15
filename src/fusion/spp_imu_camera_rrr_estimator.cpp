@@ -135,8 +135,8 @@ bool SppImuCameraRrrEstimator::addGnssMeasurementAndState(
   if (num_satellites_ == 0) {
     // erase parameters in current state
     eraseFrequencyParameterBlocks(states_[index]);
-    eraseImuState(states_[index]);
     eraseClockParameterBlocks(states_[index]);
+    eraseImuState(states_[index]);
     return false;
   }
 
