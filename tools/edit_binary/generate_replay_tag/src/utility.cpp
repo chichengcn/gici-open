@@ -152,6 +152,7 @@ double getTimestamp(const std::shared_ptr<DataCluster>& data, const YAML::Node& 
             case 'R': t_utc = timeadd(t_utc, -1800.0); break;
             case 'E': t_utc = timeadd(t_utc, 0.0); break;
             case 'C': t_utc = timeadd(t_utc, 0.0); break;
+            case 'J': t_utc = timeadd(t_utc, 0.0); break;
             default: t_utc.time = 0.0; t_utc.sec = 0.0;
           }
           SET_TIMESTAMP(gnss_common::gtimeToDouble(t_utc));

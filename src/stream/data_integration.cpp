@@ -235,6 +235,7 @@ void GnssDataIntegration::handleGNSS(const std::string& formator_tag,
       case SYS_GLO: satellite.prn = 'R'; break;
       case SYS_GAL: satellite.prn = 'E'; break;
       case SYS_CMP: satellite.prn = 'C'; break;
+      case SYS_QZS: satellite.prn = 'J'; break;
       default: continue;
     }
     sprintf(strprnnum, "%02d", prn);
