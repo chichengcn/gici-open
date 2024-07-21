@@ -141,28 +141,7 @@ double getTimestamp(const std::shared_ptr<DataCluster>& data, const YAML::Node& 
         SET_TIMESTAMP(gnss_common::gtimeToDouble(t_utc));
       }
       if (type == GnssDataType::Ephemeris) {
-        for (int i = 0; i < MAXSAT; i++) {
-          gtime_t t_utc = gnss->ephemeris->eph[i].toc;
-          if (t_utc.time == 0.0) continue;
-          char prn_buf[5];
-          satno2id(i + 1, prn_buf);
-          char system = prn_buf[0];
-          switch (system) {
-            case 'G': t_utc = timeadd(t_utc, -7200.0); break;
-            case 'R': t_utc = timeadd(t_utc, -1800.0); break;
-            case 'E': t_utc = timeadd(t_utc, 0.0); break;
-            case 'C': t_utc = timeadd(t_utc, 0.0); break;
-            default: t_utc.time = 0.0; t_utc.sec = 0.0;
-          }
-          SET_TIMESTAMP(gnss_common::gtimeToDouble(t_utc));
-        }
-        for (int i = 0; i < MAXPRNGLO; i++) {
-          gtime_t t_gps = gnss->ephemeris->geph[i].toe;
-          if (t_gps.time == 0.0) continue;
-          gtime_t t_utc = gpst2utc(t_gps);
-          t_utc = timeadd(t_utc, -1800.0);
-          SET_TIMESTAMP(gnss_common::gtimeToDouble(t_utc));
-        }
+        SET_TIMESTAMP(0.0);
       }
       if (type == GnssDataType::AntePos || type == GnssDataType::IonAndUtcPara || 
           type == GnssDataType::PhaseCenter) {
