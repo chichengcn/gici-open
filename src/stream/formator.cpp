@@ -71,17 +71,6 @@ void DataCluster::GNSS::init()
   }
 
   memset(ephemeris, 0, sizeof(nav_t));
-  if (!(ephemeris->eph = (eph_t  *)malloc(sizeof(eph_t) * MAXSAT * 2)) ||
-      !(ephemeris->geph = (geph_t *)malloc(sizeof(geph_t) * NSATGLO * 2))) {
-    free();
-  }
-
-  eph_t  eph0 = {0, -1, -1};
-  geph_t geph0 = {0, -1};
-  for (int i = 0; i < MAXSAT *2; i++) ephemeris->eph[i] = eph0;
-  for (int i = 0; i < NSATGLO * 2 ; i++) ephemeris->geph[i] = geph0;
-  ephemeris->n = MAXSAT * 2;
-  ephemeris->ng = NSATGLO * 2;
   memset(antenna, 0, sizeof(sta_t));
 }
 
@@ -89,7 +78,8 @@ void DataCluster::GNSS::free()
 {
   ::free(observation->data);
   ::free(observation); observation = NULL;
-  ::free(ephemeris->eph); ::free(ephemeris->geph);
+  if (ephemeris->eph) ::free(ephemeris->eph); 
+  if (ephemeris->geph) ::free(ephemeris->geph);
   ::free(ephemeris); ephemeris = NULL;
   ::free(antenna); antenna = NULL;
 }
@@ -108,226 +98,6 @@ void DataCluster::Image::free()
   ::free(image);
 }
 
-namespace gnss_common {
-
-// Update observation data
-extern void updateObservation(
-  obs_t *obs, std::shared_ptr<DataCluster::GNSS>& gnss_data)
-{
-  int n = 0;
-  for (int i = 0; i < obs->n; i++) {
-    gnss_data->observation[0].data[n++] = obs->data[i];
-  }
-  gnss_data->observation[0].n = n;
-  sortobs(&gnss_data->observation[0]);
-}
-
-// Update ephemeris
-extern void updateEphemeris(
-  nav_t *nav, int sat, std::shared_ptr<DataCluster::GNSS>& gnss_data)
-{
-  eph_t *eph1, *eph2, *eph3;
-  geph_t *geph1, *geph2, *geph3;
-  int prn;
-  if (satsys(sat, &prn) != SYS_GLO) {
-    eph1 = nav->eph + sat - 1;
-    eph2 = gnss_data->ephemeris->eph + sat - 1;
-    eph3 = gnss_data->ephemeris->eph + sat - 1 + MAXSAT;
-    if (eph2->ttr.time == 0 ||
-      (eph1->iode != eph3->iode && eph1->iode != eph2->iode) ||
-      (timediff(eph1->toe, eph3->toe) !=0.0 &&
-        timediff(eph1->toe, eph2->toe) != 0.0)||
-      (timediff(eph1->toc, eph3->toc) != 0.0 &&
-        timediff(eph1->toc, eph2->toc) != 0.0)) {
-      *eph3 = *eph2;
-      *eph2 = *eph1;
-    }
-  }
-  else {
-    geph1 = nav->geph + prn - 1;
-    geph2 = gnss_data->ephemeris->geph + prn - 1;
-    geph3 = gnss_data->ephemeris->geph + prn - 1 + MAXPRNGLO;
-    if (geph2->tof.time == 0 ||
-      (geph1->iode != geph3->iode && geph1->iode != geph2->iode)) {
-      *geph3 = *geph2;
-      *geph2 = *geph1;
-    }
-  }
-}
-
-// Update ion/utc parameters
-extern void updateIonAndUTC(
-  nav_t *nav, std::shared_ptr<DataCluster::GNSS>& gnss_data)
-{
-  matcpy(gnss_data->ephemeris->utc_gps, nav->utc_gps,8,1);
-  matcpy(gnss_data->ephemeris->utc_glo, nav->utc_glo,8,1);
-  matcpy(gnss_data->ephemeris->utc_gal, nav->utc_gal,8,1);
-  matcpy(gnss_data->ephemeris->utc_qzs, nav->utc_qzs,8,1);
-  matcpy(gnss_data->ephemeris->utc_cmp, nav->utc_cmp,8,1);
-  matcpy(gnss_data->ephemeris->utc_irn, nav->utc_irn,9,1);
-  matcpy(gnss_data->ephemeris->utc_sbs, nav->utc_sbs,4,1);
-  matcpy(gnss_data->ephemeris->ion_gps, nav->ion_gps,8,1);
-  matcpy(gnss_data->ephemeris->ion_gal, nav->ion_gal,4,1);
-  matcpy(gnss_data->ephemeris->ion_qzs, nav->ion_qzs,8,1);
-  matcpy(gnss_data->ephemeris->ion_cmp, nav->ion_cmp,8,1);
-  matcpy(gnss_data->ephemeris->ion_irn, nav->ion_irn,8,1);
-}
-
-// Update antenna position
-extern void updateAntennaPosition(
-  sta_t *sta, std::shared_ptr<DataCluster::GNSS>& gnss_data)
-{
-  if (sta == NULL) {
-    LOG(ERROR) << "Antenna position parameter has NULL pointer!";
-    return;
-  }
-  for (int i = 0; i < 3; i++) {
-    gnss_data->antenna->pos[i] = sta->pos[i];
-  }
-  double pos[3], del[3] = {0}, dr[3];
-  ecef2pos(sta->pos, pos);
-  if (sta->deltype == 1) { // ECEF
-    del[2] = sta->hgt;
-    enu2ecef(pos, del, dr);
-    for (int i = 0; i < 3; i++) {
-      gnss_data->antenna->pos[i] += sta->del[i] + dr[i];
-    }
-  }
-  else {  // ENU
-    enu2ecef(pos, sta->del, dr);
-    for (int i = 0; i < 3; i++) {
-      gnss_data->antenna->pos[i] += dr[i];
-    }
-  }
-}
-
-// Update ssr corrections
-extern void updateSsr(
-  ssr_t *ssr, std::shared_ptr<DataCluster::GNSS>& gnss_data,
-  std::vector<UpdateSsrType> type, bool reset_ssr_status)
-{
-  if (ssr == NULL) {
-    LOG(ERROR) << "SSR parameter has NULL pointer!";
-    return;
-  }
-  for (int i = 0; i < MAXSAT; i++) 
-  {
-    if (!ssr[i].update) continue;
-    if (reset_ssr_status) ssr[i].update = 0;
-    
-    // update ephemeris
-    if (std::find(type.begin(), type.end(), 
-        UpdateSsrType::Ephemeris) != type.end()) 
-    {
-      // check consistency between iods of orbit and clock
-      if (ssr[i].iod[0] != ssr[i].iod[1]) continue;
-
-      // common
-      gnss_data->ephemeris->ssr[i].iode = ssr[i].iode;
-      gnss_data->ephemeris->ssr[i].iodcrc = ssr[i].iodcrc;
-      gnss_data->ephemeris->ssr[i].refd = ssr[i].refd;
-      
-      // ephemeris
-      if (ssr[i].t0[0].time) {
-        gnss_data->ephemeris->ssr[i].t0[0] = ssr[i].t0[0];
-        gnss_data->ephemeris->ssr[i].udi[0] = ssr[i].udi[0];
-        gnss_data->ephemeris->ssr[i].iod[0] = ssr[i].iod[0];
-        for (int j = 0; j < 3; j++) {
-          gnss_data->ephemeris->ssr[i].deph[j] = ssr[i].deph[j];
-          gnss_data->ephemeris->ssr[i].ddeph[j] = ssr[i].ddeph[j];
-        }
-      }
-
-      // clock
-      if (ssr[i].t0[1].time) {
-        gnss_data->ephemeris->ssr[i].t0[1] = ssr[i].t0[1];
-        gnss_data->ephemeris->ssr[i].udi[1] = ssr[i].udi[1];
-        gnss_data->ephemeris->ssr[i].iod[1] = ssr[i].iod[1];
-        for (int j = 0; j < 3; j++) {
-          gnss_data->ephemeris->ssr[i].dclk[j] = ssr[i].dclk[j];
-        }
-      }
-
-      // high rate clock
-      if (ssr[i].t0[2].time) {
-        gnss_data->ephemeris->ssr[i].t0[2] = ssr[i].t0[2];
-        gnss_data->ephemeris->ssr[i].udi[2] = ssr[i].udi[2];
-        gnss_data->ephemeris->ssr[i].iod[2] = ssr[i].iod[2];
-        gnss_data->ephemeris->ssr[i].hrclk = ssr[i].hrclk;
-      }
-
-      // ura
-      if (ssr[i].t0[3].time) {
-        gnss_data->ephemeris->ssr[i].t0[3] = ssr[i].t0[3];
-        gnss_data->ephemeris->ssr[i].udi[3] = ssr[i].udi[3];
-        gnss_data->ephemeris->ssr[i].iod[3] = ssr[i].iod[3];
-        gnss_data->ephemeris->ssr[i].hrclk = ssr[i].hrclk;
-        gnss_data->ephemeris->ssr[i].ura = ssr[i].ura;
-      }
-    }
-    // update code bias
-    if (std::find(type.begin(), type.end(), 
-        UpdateSsrType::CodeBias) != type.end() && 
-        ssr[i].t0[4].time) 
-    {
-      gnss_data->ephemeris->ssr[i].t0[4] = ssr[i].t0[4];
-      gnss_data->ephemeris->ssr[i].udi[4] = ssr[i].udi[4];
-      memcpy(gnss_data->ephemeris->ssr[i].cbias, 
-            ssr[i].cbias, sizeof(float) * MAXCODE);
-      gnss_data->ephemeris->ssr[i].isdcb = ssr[i].isdcb;
-    }
-    // update phase bias
-    if (std::find(type.begin(), type.end(), 
-        UpdateSsrType::PhaseBias) != type.end() && 
-        ssr[i].t0[5].time) 
-    {
-      gnss_data->ephemeris->ssr[i].t0[5] = ssr[i].t0[5];
-      gnss_data->ephemeris->ssr[i].udi[5] = ssr[i].udi[5];
-      memcpy(gnss_data->ephemeris->ssr[i].pbias, 
-            ssr[i].pbias, sizeof(double) * MAXCODE);
-      memcpy(gnss_data->ephemeris->ssr[i].stdpb, 
-            ssr[i].stdpb, sizeof(float) * MAXCODE);
-      gnss_data->ephemeris->ssr[i].yaw_ang = ssr[i].yaw_ang;
-      gnss_data->ephemeris->ssr[i].yaw_rate = ssr[i].yaw_rate;
-      gnss_data->ephemeris->ssr[i].isdpb = ssr[i].isdpb;
-    }
-
-    if (type.size() > 0) {
-      gnss_data->ephemeris->ssr[i].update = 1;
-    }
-  }
-}
-
-// Select data from GNSS stream
-extern void updateStreamData(int ret, obs_t *obs, nav_t *nav, 
-  sta_t *sta, ssr_t *ssr, int iobs, int sat, 
-  std::vector<std::shared_ptr<DataCluster::GNSS>>& gnss_data)
-{
-  GnssDataType type = static_cast<GnssDataType>(ret);
-  // Observation data
-  if (type == GnssDataType::Observation) {
-    updateObservation(obs, gnss_data[iobs]);
-  }
-  // Ephemeris data
-  else if (type == GnssDataType::Ephemeris) {
-    updateEphemeris(nav, sat, gnss_data[0]);
-  }
-  // Ionosphere parameters
-  else if (type == GnssDataType::IonAndUtcPara) {
-    updateIonAndUTC(nav, gnss_data[0]);
-  }
-  // Antenna position parameters
-  else if (type == GnssDataType::AntePos) {
-    updateAntennaPosition(sta, gnss_data[0]);
-  }
-  // SSR (precise ephemeris, DCBs, etc..)
-  else if (type == GnssDataType::SSR) {
-    updateSsr(ssr, gnss_data[0]);
-  }
-}
-
-}
-
 // Load option with info
 #define LOAD_COMMON(opt) \
   if (!option_tools::safeGet(node, #opt, &option.opt)) { \
@@ -340,7 +110,7 @@ extern void updateStreamData(int ret, obs_t *obs, nav_t *nav,
 
 // RTCM 2 ----------------------------------------------------
 // Load date
-inline bool loadStartTime(YAML::Node& node, double& start_time) {
+inline bool loadStartTime(const YAML::Node& node, double& start_time) {
   std::string str;
   if (!option_tools::safeGet(node, "start_time", &str)) {
     LOG(INFO) << __FUNCTION__ << ": Unable to load " << "start_time"
@@ -368,7 +138,7 @@ inline bool loadStartTime(YAML::Node& node, double& start_time) {
   return true;
 }
 
-RTCM2Formator::RTCM2Formator(Option& option)
+RTCM2Formator::RTCM2Formator(const Option& option)
 {
   type_ = FormatorType::RTCM2;
 
@@ -381,7 +151,7 @@ RTCM2Formator::RTCM2Formator(Option& option)
   }
 }
 
-RTCM2Formator::RTCM2Formator(YAML::Node& node)
+RTCM2Formator::RTCM2Formator(const YAML::Node& node)
 {
   Option option;
   option.start_time = vk::Timer::getCurrentTime();
@@ -462,7 +232,7 @@ int RTCM2Formator::encode(const std::shared_ptr<DataCluster>& data, uint8_t *buf
 }
 
 // RTCM 3 -------------------------------------------------
-RTCM3Formator::RTCM3Formator(Option& option)
+RTCM3Formator::RTCM3Formator(const Option& option)
 {
   type_ = FormatorType::RTCM3;
 
@@ -475,7 +245,7 @@ RTCM3Formator::RTCM3Formator(Option& option)
   }
 }
 
-RTCM3Formator::RTCM3Formator(YAML::Node& node)
+RTCM3Formator::RTCM3Formator(const YAML::Node& node)
 {
   Option option;
   option.start_time = vk::Timer::getCurrentTime();
@@ -610,7 +380,7 @@ int RTCM3Formator::encode(
 }
 
 // GNSS raw --------------------------------------------------------
-GnssRawFormator::GnssRawFormator(Option& option)
+GnssRawFormator::GnssRawFormator(const Option& option)
 {
   type_ = FormatorType::GnssRaw;
   option_tools::convert(option.sub_type, format_);
@@ -622,7 +392,7 @@ GnssRawFormator::GnssRawFormator(Option& option)
   }
 }
   
-GnssRawFormator::GnssRawFormator(YAML::Node& node)
+GnssRawFormator::GnssRawFormator(const YAML::Node& node)
 {
   Option option;
   option.start_time = vk::Timer::getCurrentTime();
@@ -712,7 +482,7 @@ int GnssRawFormator::encode(const std::shared_ptr<DataCluster>& data, uint8_t *b
 }
 
 // GNSS Rinex --------------------------------------------------------
-RINEXFormator::RINEXFormator(Option& option)
+RINEXFormator::RINEXFormator(const Option& option)
 {
   type_ = FormatorType::RINEX;
   
@@ -729,7 +499,7 @@ RINEXFormator::RINEXFormator(Option& option)
   }
 }
   
-RINEXFormator::RINEXFormator(YAML::Node& node)
+RINEXFormator::RINEXFormator(const YAML::Node& node)
 {
   type_ = FormatorType::RINEX;
 
@@ -927,7 +697,7 @@ int RINEXFormator::encode(const std::shared_ptr<DataCluster>& data, uint8_t *buf
 }
 
 // Image V4L2 ------------------------------------------------
-ImageV4L2Formator::ImageV4L2Formator(Option& option)
+ImageV4L2Formator::ImageV4L2Formator(const Option& option)
 {
   type_ = FormatorType::ImageV4L2;
 
@@ -936,7 +706,7 @@ ImageV4L2Formator::ImageV4L2Formator(Option& option)
     FormatorType::ImageV4L2, option.width, option.height, option.step));
 }
 
-ImageV4L2Formator::ImageV4L2Formator(YAML::Node& node)
+ImageV4L2Formator::ImageV4L2Formator(const YAML::Node& node)
 {
   Option option;
   LOAD_REQUIRED(width);
@@ -977,7 +747,7 @@ int ImageV4L2Formator::encode(const std::shared_ptr<DataCluster>& data, uint8_t 
 }
   
 // Image pack -------------------------------------------------
-ImagePackFormator::ImagePackFormator(Option& option)
+ImagePackFormator::ImagePackFormator(const Option& option)
 {
   type_ = FormatorType::ImagePack;
 
@@ -988,7 +758,7 @@ ImagePackFormator::ImagePackFormator(Option& option)
   }
 }
 
-ImagePackFormator::ImagePackFormator(YAML::Node& node)
+ImagePackFormator::ImagePackFormator(const YAML::Node& node)
 {
   Option option;
   LOAD_REQUIRED(width);
@@ -1057,14 +827,14 @@ int ImagePackFormator::encode(
 }
 
 // IMU pack --------------------------------------------------
-IMUPackFormator::IMUPackFormator(Option& option)
+IMUPackFormator::IMUPackFormator(const Option& option)
 {
   type_ = FormatorType::IMUPack;
 
   init_imu(&imu_);
 }
 
-IMUPackFormator::IMUPackFormator(YAML::Node& node)
+IMUPackFormator::IMUPackFormator(const YAML::Node& node)
 {
   type_ = FormatorType::IMUPack;
 
@@ -1124,12 +894,12 @@ int IMUPackFormator::encode(const std::shared_ptr<DataCluster>& data, uint8_t *b
 }
 
 // Option pack --------------------------------------------------
-OptionFormator::OptionFormator(Option& option)
+OptionFormator::OptionFormator(const Option& option)
 {
 
 }
 
-OptionFormator::OptionFormator(YAML::Node& node)
+OptionFormator::OptionFormator(const YAML::Node& node)
 {
 
 }
@@ -1153,14 +923,14 @@ int OptionFormator::encode(const std::shared_ptr<DataCluster>& data, uint8_t *bu
 }
 
 // NMEA ----------------------------------------------------------
-NmeaFormator::NmeaFormator(Option& option)
+NmeaFormator::NmeaFormator(const Option& option)
 {
   type_ = FormatorType::NMEA;
 
   option_ = option;
 }
 
-NmeaFormator::NmeaFormator(YAML::Node& node)
+NmeaFormator::NmeaFormator(const YAML::Node& node)
 {
   type_ = FormatorType::NMEA;
 
@@ -1395,13 +1165,13 @@ void NmeaFormator::convertSolution(const Solution& solution, sol_t& sol)
 }
 
 // DCB file pack --------------------------------------------------
-DcbFileFormator::DcbFileFormator(Option& option)
+DcbFileFormator::DcbFileFormator(const Option& option)
 {
   type_ = FormatorType::DcbFile;
   line_.reserve(max_line_length_); 
 }
 
-DcbFileFormator::DcbFileFormator(YAML::Node& node)
+DcbFileFormator::DcbFileFormator(const YAML::Node& node)
 {
   type_ = FormatorType::DcbFile;
   line_.reserve(max_line_length_); 
@@ -1547,7 +1317,7 @@ int DcbFileFormator::encode(const std::shared_ptr<DataCluster>& data, uint8_t *b
 }
 
 // ATX file pack --------------------------------------------------
-AtxFileFormator::AtxFileFormator(Option& option)
+AtxFileFormator::AtxFileFormator(const Option& option)
 {
   type_ = FormatorType::AtxFile;
   line_.reserve(max_line_length_); 
@@ -1557,7 +1327,7 @@ AtxFileFormator::AtxFileFormator(Option& option)
   memset(pcvs_, 0, sizeof(pcvs_t));
 }
 
-AtxFileFormator::AtxFileFormator(YAML::Node& node)
+AtxFileFormator::AtxFileFormator(const YAML::Node& node)
 {
   type_ = FormatorType::AtxFile;
   line_.reserve(max_line_length_); 
@@ -1719,7 +1489,7 @@ int AtxFileFormator::decodef(char *p, int n, double *v)
 #define MAP_FORMATOR(Type, Formator) \
   if (type == Type) { return std::make_shared<Formator>(node); }
 #define LOG_UNSUPPORT LOG(FATAL) << "Formator type not supported!";
-inline static FormatorType loadType(YAML::Node& node)
+inline static FormatorType loadType(const YAML::Node& node)
 {
   if (!node["type"].IsDefined()) {
     LOG(FATAL) << "Unable to load formator type!";
@@ -1729,7 +1499,7 @@ inline static FormatorType loadType(YAML::Node& node)
   option_tools::convert(type_str, type);
   return type;
 }
-std::shared_ptr<FormatorBase> makeFormator(YAML::Node& node)
+std::shared_ptr<FormatorBase> makeFormator(const YAML::Node& node)
 {
   FormatorType type = loadType(node);
   MAP_FORMATOR(FormatorType::RTCM2, RTCM2Formator);

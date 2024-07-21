@@ -9,6 +9,7 @@
 #pragma once
 
 #include "gici/stream/streaming.h"
+#include "gici/stream/files_reading.h"
 #include "gici/estimate/estimating.h"
 
 namespace gici {
@@ -23,6 +24,11 @@ public:
     const std::shared_ptr<EstimatingBase>& estimating, 
     const std::vector<std::shared_ptr<Streaming>>& streamings,
     const std::vector<std::string>& formator_tags,
+    const std::vector<std::vector<std::string>>& roles);
+  DataIntegrationBase(
+    const std::shared_ptr<EstimatingBase>& estimating, 
+    const std::shared_ptr<FilesReading>& files_reading,
+    const std::vector<std::string>& streamer_tags,
     const std::vector<std::vector<std::string>>& roles);
   DataIntegrationBase() { }
   ~DataIntegrationBase() { }
@@ -52,14 +58,33 @@ public:
     const std::shared_ptr<EstimatingBase>& estimating, 
     const std::vector<std::shared_ptr<Streaming>>& streamings,
     const std::vector<std::string>& formator_tags,
-    const std::vector<std::vector<std::string>>& roles);
-  ~GnssDataIntegration();
+    const std::vector<std::vector<std::string>>& roles) : 
+    DataIntegrationBase(estimating, streamings, formator_tags, roles) {
+    init();
+  }
+  GnssDataIntegration(
+    const std::shared_ptr<EstimatingBase>& estimating, 
+    const std::shared_ptr<FilesReading>& files_reading,
+    const std::vector<std::string>& streamer_tags,
+    const std::vector<std::vector<std::string>>& roles) : 
+    DataIntegrationBase(estimating, files_reading, streamer_tags, roles) {
+    init();
+  }
+  ~GnssDataIntegration() {
+    free();
+  }
 
   // Data callback
   void dataCallback(
     const std::string& input_tag, const std::shared_ptr<DataCluster>& data) override;
 
 protected:
+  // Initialize
+  void init();
+
+  // Free
+  void free();
+
   // Handle GNSS data
   void handleGNSS(const std::string& formator_tag, 
                   const std::shared_ptr<DataCluster::GNSS>& gnss);
@@ -95,6 +120,14 @@ public:
     DataIntegrationBase(estimating, streamings, formator_tags, roles) {
     valid_ = true;
   }
+  ImuDataIntegration(
+    const std::shared_ptr<EstimatingBase>& estimating, 
+    const std::shared_ptr<FilesReading>& files_reading,
+    const std::vector<std::string>& streamer_tags,
+    const std::vector<std::vector<std::string>>& roles) : 
+    DataIntegrationBase(estimating, files_reading, streamer_tags, roles) {
+    valid_ = true;
+  }
 
   // Data callback
   void dataCallback(
@@ -115,6 +148,14 @@ public:
     const std::vector<std::string>& formator_tags,
     const std::vector<std::vector<std::string>>& roles) :
     DataIntegrationBase(estimating, streamings, formator_tags, roles) {
+    valid_ = true;
+  }
+  ImageDataIntegration(
+    const std::shared_ptr<EstimatingBase>& estimating, 
+    const std::shared_ptr<FilesReading>& files_reading,
+    const std::vector<std::string>& streamer_tags,
+    const std::vector<std::vector<std::string>>& roles) : 
+    DataIntegrationBase(estimating, files_reading, streamer_tags, roles) {
     valid_ = true;
   }
 
@@ -145,7 +186,16 @@ public:
     const std::vector<std::string>& formator_tags,
     const std::vector<std::vector<std::string>>& roles) :
     DataIntegrationBase(estimating, streamings, formator_tags, roles) {
-    is_from_estimator_ = true;
+    is_from_estimator_ = false;
+    valid_ = true;
+  }
+  SolutionDataIntegration(
+    const std::shared_ptr<EstimatingBase>& estimating, 
+    const std::shared_ptr<FilesReading>& files_reading,
+    const std::vector<std::string>& streamer_tags,
+    const std::vector<std::vector<std::string>>& roles) : 
+    DataIntegrationBase(estimating, files_reading, streamer_tags, roles) {
+    is_from_estimator_ = false;
     valid_ = true;
   }
 

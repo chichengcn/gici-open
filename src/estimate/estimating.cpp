@@ -27,7 +27,7 @@ EstimatingBase::EstimatingBase(
 
   if (!option_tools::safeGet(
       node, "output_align_tag", &output_align_tag_)) {
-    LOG(FATAL) << "Unable to load estimator loop duration align tag!";
+    LOG(FATAL) << "Unable to load output align tag!";
     return;
   }
   if (output_align_tag_.substr(0, 4) == "fmt_" || 

@@ -13,6 +13,7 @@
 #include "gici/stream/streamer.h"
 #include "gici/stream/formator.h"
 #include "gici/stream/streaming.h"
+#include "gici/stream/file_reader.h"
 #include "gici/gnss/gnss_types.h"
 #include "gici/imu/imu_types.h"
 #include "gici/vision/image_types.h"
@@ -62,6 +63,7 @@ void convert<std::string, StreamerType>
   MAP_IN_OUT("ntrip-client", StreamerType::NtripClient);
   MAP_IN_OUT("ntrip-server", StreamerType::NtripServer);
   MAP_IN_OUT("v4l2", StreamerType::V4L2);
+  MAP_IN_OUT("post-file", StreamerType::PostFile);
   MAP_IN_OUT("ros", StreamerType::Ros);
   LOG_INVALId;
 }
@@ -81,6 +83,22 @@ void convert<std::string, FormatorType>
   MAP_IN_OUT("nmea", FormatorType::NMEA);
   MAP_IN_OUT("dcb-file", FormatorType::DcbFile);
   MAP_IN_OUT("atx-file", FormatorType::AtxFile);
+  LOG_INVALId;
+}
+
+template <>
+void convert<std::string, FileReaderType>
+  (const std::string& in, FileReaderType& out)
+{
+  MAP_IN_OUT("gnss-rtcm-2", FileReaderType::RTCM2);
+  MAP_IN_OUT("gnss-rtcm-3", FileReaderType::RTCM3);
+  MAP_IN_OUT("gnss-raw", FileReaderType::GnssRaw);
+  MAP_IN_OUT("gnss-rinex", FileReaderType::RINEX);
+  MAP_IN_OUT("image-pack", FileReaderType::ImagePack);
+  MAP_IN_OUT("imu-pack", FileReaderType::IMUPack);
+  MAP_IN_OUT("nmea", FileReaderType::NMEA);
+  MAP_IN_OUT("dcb-file", FileReaderType::DcbFile);
+  MAP_IN_OUT("atx-file", FileReaderType::AtxFile);
   LOG_INVALId;
 }
 

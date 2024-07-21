@@ -44,7 +44,7 @@ RosNodeHandle::RosNodeHandle(ros::NodeHandle& nh, const NodeOptionHandlePtr& nod
 
   // Clear streamer->formator->estimator pipeline and rebind them together with
   // ROS-streamer->estimator pipelines
-  rebindAllStreamerToEstimator(nodes);
+  if (!files_reading_->valid()) rebindAllStreamerToEstimator(nodes);
 
   // Bind ROS-streamer->ROS-streamer pipelines
   RosStream::bindLogWithInput();
