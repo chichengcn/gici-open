@@ -239,15 +239,17 @@ bool SppEstimator::estimate()
       has_velocity_estimate_ = false;
     }
     else {
-      // To speed-up the optimization, we do the following things:
-      // erase all pseudorange residuals
-      erasePseudorangeResidualBlocks(curState());
-      // set position and clock parameters as constant
-      graph_->setParameterBlockConstant(curState().id.asInteger());
-      for (auto system : getGnssSystemList()) {
-        BackendId clock_id = changeIdType(curState().id, IdType::gClock, system);
-        if (graph_->parameterBlockExists(clock_id.asInteger())) {
-          graph_->setParameterBlockConstant(clock_id.asInteger());
+      if (!base_options_.compute_covariance) {
+        // To speed-up the optimization, we do the following things:
+        // erase all pseudorange residuals
+        erasePseudorangeResidualBlocks(curState());
+        // set position and clock parameters as constant
+        graph_->setParameterBlockConstant(curState().id.asInteger());
+        for (auto system : getGnssSystemList()) {
+          BackendId clock_id = changeIdType(curState().id, IdType::gClock, system);
+          if (graph_->parameterBlockExists(clock_id.asInteger())) {
+            graph_->setParameterBlockConstant(clock_id.asInteger());
+          }
         }
       }
 
