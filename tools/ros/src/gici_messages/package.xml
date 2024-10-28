@@ -1,5 +1,5 @@
 <package>
-  <name>gici_ros</name>
+  <name>gici_messages</name>
   <version>1.0.0</version>
   <description>GICI ros wrapper</description>
   <license>BSD</license>
