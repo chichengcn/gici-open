@@ -37,7 +37,7 @@
   <run_depend>libpcl-all</run_depend>
   <run_depend>pcl_conversions</run_depend>
   <run_depend>pcl_ros</run_depend>
-  <run_depend>ros_bag</run_depend>
+  <run_depend>rosbag</run_depend>
   <run_depend>message_runtime</run_depend>
   <run_depend>message_generation</run_depend>
   <run_depend>gici_ros</run_depend>
