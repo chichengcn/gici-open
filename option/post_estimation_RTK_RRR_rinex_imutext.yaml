@@ -5,26 +5,23 @@ stream:
   - streamer:
       tag: str_gnss_rov_file
       type: post-file
-      path: <data-directory>/gnss_rover.bin
+      path: <data-directory>/gnss_rover.23O  # converted by rtklib. Sample data is updated to dataset, namely *-rinex-imutext.
       format:
-        type: gnss-raw
-        sub_type: tersus
+        type: gnss-rinex
       latency: 0.0
   - streamer:
       tag: str_gnss_ref_file
       type: post-file
-      path: <data-directory>/gnss_reference.bin
+      path: <data-directory>/gnss_reference.23O
       format:
-        type: gnss-rtcm-3
-        start_time: 2023.03.20
+        type: gnss-rinex
   - streamer:
       tag: str_gnss_eph_file
       type: post-file
-      path: <data-directory>/gnss_ephemeris.bin
+      path: <data-directory>/gnss_ephemeris.23P
       burst_load: true  # burst load will load all data at once in the beginning
       format:
-        type: gnss-rtcm-3
-        start_time: 2023.03.20
+        type: gnss-rinex
   - streamer:
       tag: str_dcb_file
       type: post-file
@@ -35,9 +32,9 @@ stream:
   - streamer:
       tag: str_imu_file
       type: post-file
-      path: <data-directory>/imu.bin
+      path: <data-directory>/imu.bin.txt  # converted from imu.bin using tools/evaluation/format_converters/src/imupack_to_text.cpp
       format:
-        type: imu-pack
+        type: imu-text
   - streamer:
       tag: str_camera_file
       type: post-file
