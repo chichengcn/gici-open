@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "gici/stream/streaming.h"
+#include "gici/stream/files_reading.h"
 #include "gici/estimate/estimating.h"
 #include "gici/stream/data_integration.h"
 
@@ -31,6 +32,9 @@ protected:
   // Bind streamer->formator->estimator pipelines
   void bindStreamerToFormatorToEstimator(const NodeOptionHandlePtr& nodes);
 
+  // Bind post-file->estimator pipelines
+  void bindPostFileToEstimator(const NodeOptionHandlePtr& nodes);
+
   // Bind estimator->formator->streamer pipelines
   void bindEstimatorToFormatorToStreamer(const NodeOptionHandlePtr& nodes);
 
@@ -48,6 +52,9 @@ protected:
 protected:
   // Streaming threads, handles streamer and formators
   std::vector<std::shared_ptr<Streaming>> streamings_;
+
+  // Files reading thread, handles post-file streamers
+  std::shared_ptr<FilesReading> files_reading_;
 
   // Estimating threads, handles estimators
   std::vector<std::shared_ptr<EstimatingBase>> estimatings_;

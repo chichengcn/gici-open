@@ -113,7 +113,7 @@ int getProperBufLength(const YAML::Node& node)
   
   // large value may cause latency, small value may cause jamming.
   if (type == FormatorType::RTCM2 || type == FormatorType::RTCM3 
-   || type == FormatorType::GnssRaw) {
+   || type == FormatorType::GnssRaw || type == FormatorType::RINEX) {
     return 32;
   }
   else if (type == FormatorType::ImagePack) {

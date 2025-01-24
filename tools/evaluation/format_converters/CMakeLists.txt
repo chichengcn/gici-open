@@ -15,7 +15,7 @@ find_package(glog REQUIRED)
 # Opencv
 find_package(OpenCV 4 REQUIRED)
 # RTKLIB
-add_definitions(-DENAGLO -DENACMP -DENAGAL -DNFREQ=3 -DNEXOBS=3 -DDLL)
+add_definitions(-DENAGLO -DENACMP -DENAGAL -DENAQZS -DENAIRN -DNFREQ=3 -DNEXOBS=3 -DDLL)
 add_subdirectory(../../../third_party/rtklib rtklib.out)
 
 include_directories(

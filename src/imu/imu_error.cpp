@@ -63,15 +63,21 @@ ImuError::ImuError(const ImuMeasurements &imu_measurements,
 
   double dt0 = t0_ - imu_measurements_.front().timestamp;
   double dt1 = t1_ - imu_measurements_.back().timestamp;
+  double imu_dt = (imu_measurements.back().timestamp - 
+    imu_measurements.front().timestamp) / static_cast<double>(imu_measurements.size());
   if (dt0 < 0.0) {
-    LOG(ERROR) << "First IMU measurement included in ImuError is not old enough: "
-      << std::fixed << t0_ << " vs " << imu_measurements_.front().timestamp;
+    if (dt0 < -imu_dt) {
+      LOG(ERROR) << "First IMU measurement included in ImuError is not old enough: "
+        << std::fixed << t0_ << " vs " << imu_measurements_.front().timestamp;
+    }
     imu_measurements_.push_front(imu_measurements_.front());
     imu_measurements_.front().timestamp = t0_;
   }
   if (dt1 > 0.0) {
-    LOG(ERROR) << "Last IMU measurement included in ImuError is not new enough: "
-      << std::fixed << t1_ << " vs " << imu_measurements_.back().timestamp;
+    if (dt1 > imu_dt) {
+      LOG(ERROR) << "Last IMU measurement included in ImuError is not new enough: "
+        << std::fixed << t1_ << " vs " << imu_measurements_.back().timestamp;
+    }
     imu_measurements_.push_back(imu_measurements_.back());
     imu_measurements_.back().timestamp = t1_;
   }
@@ -303,14 +309,20 @@ int ImuError::propagation(const ImuMeasurements& imu_measurements,
   ImuMeasurements imu_measurements_modified;
   double dt0 = t_start_adjusted - imu_measurements.front().timestamp;
   double dt1 = t_end_adjusted - imu_measurements.back().timestamp;
+  double imu_dt = (imu_measurements.back().timestamp - 
+    imu_measurements.front().timestamp) / static_cast<double>(imu_measurements.size());
   if (dt0 < 0.0) {
-    LOG(ERROR) << "First IMU measurement included in imu_measurements is not old enough: "
-      << std::fixed << t_start_adjusted << " vs " << imu_measurements.front().timestamp;
+    if (dt0 < -imu_dt) {
+      LOG(ERROR) << "First IMU measurement included in imu_measurements is not old enough: "
+        << std::fixed << t_start_adjusted << " vs " << imu_measurements.front().timestamp;
+    }
     modify_front = true;
   }
   if (dt1 > 0.0) {
-    LOG(ERROR) << "Last IMU measurement included in imu_measurements is not new enough: "
-      << std::fixed << t_end_adjusted << " vs " << imu_measurements.back().timestamp;
+    if (dt1 > imu_dt) {
+      LOG(ERROR) << "Last IMU measurement included in imu_measurements is not new enough: "
+        << std::fixed << t_end_adjusted << " vs " << imu_measurements.back().timestamp;
+    }
     modify_back = true;
   }
   if (modify_front || modify_back) imu_measurements_modified = imu_measurements;

@@ -639,7 +639,7 @@ static void decode_hnavh(char *buff, nav_t *nav)
     else if (strstr(label,"LEAP SECONDS"        )) {} /* opt */
 }
 /* read RINEX file header ----------------------------------------------------*/
-static int readrnxh(FILE *fp, double *ver, char *type, int *sys, int *tsys,
+extern int readrnxh(FILE *fp, double *ver, char *type, int *sys, int *tsys,
                     char tobs[][MAXOBSTYPE][4], nav_t *nav, sta_t *sta)
 {
     char buff[MAXRNXLEN],*label=buff+60;
@@ -980,7 +980,7 @@ static void set_index(double ver, int sys, const char *opt,
 #endif
 }
 /* read RINEX observation data body ------------------------------------------*/
-static int readrnxobsb(FILE *fp, const char *opt, double ver, int *tsys,
+extern int readrnxobsb(FILE *fp, const char *opt, double ver, int *tsys,
                        char tobs[][MAXOBSTYPE][4], int *flag, obsd_t *data,
                        sta_t *sta)
 {
@@ -1003,6 +1003,8 @@ static int readrnxobsb(FILE *fp, const char *opt, double ver, int *tsys,
     
     /* read record */
     while (fgets(buff,MAXRNXLEN,fp)) {
+        /* check for gici stream */
+        if (buff[0] == 0x00) break;
         
         /* decode observation epoch */
         if (i==0) {
@@ -1273,7 +1275,7 @@ static int decode_seph(double ver, int sat, gtime_t toc, double *data,
     return 1;
 }
 /* read RINEX navigation data body -------------------------------------------*/
-static int readrnxnavb(FILE *fp, const char *opt, double ver, int sys,
+extern int readrnxnavb(FILE *fp, const char *opt, double ver, int sys,
                        int *type, eph_t *eph, geph_t *geph, seph_t *seph)
 {
     gtime_t toc;
@@ -1287,7 +1289,9 @@ static int readrnxnavb(FILE *fp, const char *opt, double ver, int sys,
     mask=set_sysmask(opt);
     
     while (fgets(buff,MAXRNXLEN,fp)) {
-        
+        /* check for gici stream */
+        if (buff[0] == 0x00) break;
+
         if (i==0) {
             
             /* decode satellite field */

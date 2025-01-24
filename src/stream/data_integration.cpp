@@ -40,13 +40,44 @@ DataIntegrationBase::DataIntegrationBase(
   }
 }
 
-// GNSS data integration
-GnssDataIntegration::GnssDataIntegration(
+DataIntegrationBase::DataIntegrationBase(
   const std::shared_ptr<EstimatingBase>& estimating, 
-  const std::vector<std::shared_ptr<Streaming>>& streamings,
-  const std::vector<std::string>& formator_tags,
-  const std::vector<std::vector<std::string>>& roles) :
-  DataIntegrationBase(estimating, streamings, formator_tags, roles)
+  const std::shared_ptr<FilesReading>& files_reading,
+  const std::vector<std::string>& streamer_tags,
+  const std::vector<std::vector<std::string>>& roles)
+{
+  // Bind this->dataCallback to files reading
+  Streaming::DataCallback callback = std::bind(
+    &DataIntegrationBase::dataCallback, 
+    this, std::placeholders::_1, std::placeholders::_2);
+  files_reading->setDataCallback(callback);
+
+  // Bind estimator->estimatorDataCallback to this->estimator_callbacks_
+  EstimatorDataCallback estimator_callback = 
+    std::bind(&EstimatingBase::estimatorDataCallback, 
+      estimating.get(), std::placeholders::_1);
+  estimator_callbacks_.push_back(estimator_callback);
+
+  // Declare behaviors for stream inputs
+  CHECK(streamer_tags.size() == roles.size());
+  for (size_t i = 0; i < streamer_tags.size(); i++) {
+    behaviors_.insert(std::make_pair(streamer_tags[i], roles[i]));
+  }
+}
+
+// Data callback
+void GnssDataIntegration::dataCallback(
+  const std::string& input_tag, const std::shared_ptr<DataCluster>& data)
+{
+  if (data->gnss && valid_) {
+    mutex_.lock();
+    handleGNSS(input_tag, data->gnss);
+    mutex_.unlock();
+  }
+}
+
+// Initialize
+void GnssDataIntegration::init()
 {
   // Initialize data handles
   gnss_local_ = std::make_shared<DataCluster::GNSS>();
@@ -83,23 +114,13 @@ GnssDataIntegration::GnssDataIntegration(
   valid_ = true;
 }
 
-GnssDataIntegration::~GnssDataIntegration()
+// Free
+void GnssDataIntegration::free()
 {
   // Free handles
   mutex_.lock();
   gnss_local_->free();
   mutex_.unlock();
-}
-
-// Data callback
-void GnssDataIntegration::dataCallback(
-  const std::string& input_tag, const std::shared_ptr<DataCluster>& data)
-{
-  if (data->gnss && valid_) {
-    mutex_.lock();
-    handleGNSS(input_tag, data->gnss);
-    mutex_.unlock();
-  }
 }
 
 // Handle GNSS data
@@ -286,8 +307,8 @@ void GnssDataIntegration::handleGNSS(const std::string& formator_tag,
 
     epoch.satellites.insert(std::make_pair(satellite.prn, satellite));
   }
-  free(rs); free(dts); free(var);
-  free(rs_ssr); free(dts_ssr); free(var_ssr);
+  ::free(rs); ::free(dts); ::free(var);
+  ::free(rs_ssr); ::free(dts_ssr); ::free(var_ssr);
 
   // check number of satellites
   if (epoch.satellites.size() == 0) return;
@@ -338,14 +359,16 @@ void GnssDataIntegration::handleGNSS(const std::string& formator_tag,
 // Update GNSS ephemerides to local
 void GnssDataIntegration::updateEphemerides(const nav_t *nav)
 {
-  for (int i = 0; i < 2 * MAXSAT; i++) {
+  for (int i = 0; i < nav->n; i++) {
     if (nav->eph[i].sat <= 0) continue;
-    memcpy(gnss_local_->ephemeris->eph + i, nav->eph + i, sizeof(eph_t));
+    gnss_common::add_eph(gnss_local_->ephemeris, nav->eph+i);
   }
-  for (int i = 0; i < 2 * NSATGLO; i++) {
+  for (int i = 0; i < nav->ng; i++) {
     if (nav->geph[i].sat <= 0) continue;
-    memcpy(gnss_local_->ephemeris->geph + i, nav->geph + i, sizeof(geph_t));
+    gnss_common::add_geph(gnss_local_->ephemeris, nav->geph+i);
   }
+  gnss_common::uniqeph(gnss_local_->ephemeris);
+  gnss_common::uniqgeph(gnss_local_->ephemeris);
 }
 
 // Update GNSS code bias to local
@@ -391,7 +414,7 @@ void GnssDataIntegration::updateCodeBias()
 void GnssDataIntegration::updateTgd()
 {
   nav_t *nav = gnss_local_->ephemeris;
-  for (int i = 0; i < MAXSAT; i++) {
+  for (int i = 0; i < nav->n; i++) {
     eph_t *eph = nav->eph + i;
     if (eph->sat <= 0) continue;
     std::string prn = gnss_common::satToPrn(eph->sat);
@@ -418,7 +441,7 @@ void GnssDataIntegration::updateTgd()
       }
     }
   }
-  for (int i = 0; i < NSATGLO; i++) {
+  for (int i = 0; i < nav->ng; i++) {
     geph_t *geph = nav->geph;
     if (geph->sat <= 0) continue;
     std::string prn = gnss_common::satToPrn(geph->sat);

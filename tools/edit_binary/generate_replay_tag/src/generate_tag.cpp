@@ -157,6 +157,12 @@ int main(int argc, char** argv)
       double dt = timestamp - start_timestamp;
       if (dt < 0.0) dt = 0.0;
       uint32_t tick = (uint32_t)(dt * 1.0e3);
+
+      // avoid data crowding together
+      static uint32_t last_tick = 0;
+      if (tick <= last_tick) tick = last_tick + 10;
+      last_tick = tick;
+
       fwrite(&tick,1,sizeof(tick),file_client->fp_tag);
       long fpos=ftell(file_client->fp);
       if (file_client->size_fpos==4) {
@@ -168,6 +174,8 @@ int main(int argc, char** argv)
         fwrite(&fpos_8B,1,sizeof(fpos_8B),file_client->fp_tag);
       }
       fflush(file_client->fp_tag);
+      
+      std::cout << "Generated tick at " << tick << std::endl;
     }
   }
 

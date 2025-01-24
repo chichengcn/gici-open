@@ -9,6 +9,7 @@
 #include "gici/stream/node_handle.h"
 
 #include "gici/fusion/multisensor_estimating.h"
+#include "gici/fusion/multisensor_single_thread_estimating.h"
 
 namespace gici {
 
@@ -20,12 +21,15 @@ NodeHandle::NodeHandle(const NodeOptionHandlePtr& nodes)
     std::string type_str = nodes->streamers[i]->type;
     StreamerType type;
     option_tools::convert(type_str, type);
-    if (type == StreamerType::Ros) continue;
+    if (type == StreamerType::Ros || type == StreamerType::PostFile) continue;
 
     auto streaming = std::make_shared<Streaming>(nodes, i);
     if (!streaming->valid()) continue;
     streamings_.push_back(streaming);
   }
+
+  // Initialize files reading thread
+  files_reading_ = std::make_shared<FilesReading>(nodes);
 
   // Initialize estimator threads
   for (size_t i = 0; i < nodes->estimators.size(); i++) {
@@ -34,8 +38,15 @@ NodeHandle::NodeHandle(const NodeOptionHandlePtr& nodes)
     option_tools::convert(type_str, type);
 
     if (type != EstimatorType::None) {
-      auto estimating = std::make_shared<MultiSensorEstimating>(nodes, i);
-      estimatings_.push_back(estimating);
+      // use single thread handle for post-file replay
+      if (files_reading_->valid()) {
+        auto estimating = std::make_shared<MultiSensorSingleThreadEstimating>(nodes, i);
+        estimatings_.push_back(estimating);
+      }
+      else {
+        auto estimating = std::make_shared<MultiSensorEstimating>(nodes, i);
+        estimatings_.push_back(estimating);
+      }
     }
   }
 
@@ -44,6 +55,9 @@ NodeHandle::NodeHandle(const NodeOptionHandlePtr& nodes)
 
   // Bind streamer->formator->estimator pipelines
   bindStreamerToFormatorToEstimator(nodes);
+
+  // Bind post-file->estimator pipelines
+  bindPostFileToEstimator(nodes);
 
   // Bind estimator->formator->streamer pipelines
   bindEstimatorToFormatorToStreamer(nodes);
@@ -59,6 +73,7 @@ NodeHandle::NodeHandle(const NodeOptionHandlePtr& nodes)
     LOG(INFO) << "Unable to load replay options. Disable replay!";
   }
   if (enable_replay) {
+    if (!files_reading_->valid())  // this option is not used in post-file replay mode
     if (!option_tools::safeGet(nodes->replay_options, "speed", &replay_options.speed)) {
       LOG(INFO) << "Unable to load replay speed! Using default instead";
       replay_options.speed = 1.0;
@@ -68,13 +83,17 @@ NodeHandle::NodeHandle(const NodeOptionHandlePtr& nodes)
       LOG(INFO) << "Unable to load replay start offset! Using default instead";
       replay_options.start_offset = 0.0;
     }
-    Streaming::enableReplay(replay_options);
+    // do not enable streaming replay in post-file replay mode
+    if (!files_reading_->valid()) Streaming::enableReplay(replay_options);
   }
 
   // Start streamings
   for (size_t i = 0; i < streamings_.size(); i++) {
     streamings_[i]->start();
   }
+
+  // Start files reading
+  files_reading_->start();
 
   // Start estimators
   for (size_t i = 0; i < estimatings_.size(); i++) {
@@ -180,6 +199,62 @@ void NodeHandle::bindStreamerToFormatorToEstimator(const NodeOptionHandlePtr& no
       estimating, image_streamings, image_tags, image_roles));
     data_integrations.push_back(std::make_shared<SolutionDataIntegration>(
       estimating, solution_streamings, solution_tags, solution_roles));
+    data_integrations_.back() = data_integrations;
+  }
+}
+
+// Bind post-file->estimator pipelines
+void NodeHandle::bindPostFileToEstimator(const NodeOptionHandlePtr& nodes)
+{
+  for (auto estimating : estimatings_) {
+    data_integrations_.push_back(std::vector<std::shared_ptr<DataIntegrationBase>>());
+    std::string estimator_tag = estimating->getTag();
+    NodeOptionHandle::EstimatorNodeBasePtr estimator_node = 
+      std::static_pointer_cast<NodeOptionHandle::EstimatorNodeBase>(
+        nodes->tag_to_node.at(estimator_tag));
+    const auto& input_tags = estimator_node->input_tags;
+    const auto& input_tag_roles = estimator_node->input_tag_roles;
+    CHECK(input_tags.size() == input_tag_roles.size());
+
+    // distinguish sensors
+    std::vector<std::string> gnss_tags, imu_tags, image_tags, solution_tags;
+    std::vector<std::vector<std::string>> gnss_roles, imu_roles, image_roles, solution_roles;
+    for (size_t i = 0; i < input_tags.size(); i++) {
+      const std::string& input_tag = input_tags[i];
+      const std::vector<std::string>& roles = input_tag_roles[i];
+
+      // only handle formator input here
+      if (input_tag.substr(0, 4) != "str_") continue;
+      if (!files_reading_->hasTag(input_tag)) continue;
+
+      if (option_tools::sensorType(roles[0]) == SensorType::GNSS) {
+        gnss_tags.push_back(input_tag);
+        gnss_roles.push_back(roles);
+      }
+      else if (option_tools::sensorType(roles[0]) == SensorType::IMU) {
+        imu_tags.push_back(input_tag);
+        imu_roles.push_back(roles);
+      }
+      else if (option_tools::sensorType(roles[0]) == SensorType::Camera) {
+        image_tags.push_back(input_tag);
+        image_roles.push_back(roles);
+      }
+      else if (option_tools::sensorType(roles[0]) == SensorType::GeneralSolution) {
+        solution_tags.push_back(input_tag);
+        solution_roles.push_back(roles);
+      }
+    }
+
+    // initialize data integration handles
+    std::vector<std::shared_ptr<DataIntegrationBase>> data_integrations;
+    data_integrations.push_back(std::make_shared<GnssDataIntegration>(
+      estimating, files_reading_, gnss_tags, gnss_roles));
+    data_integrations.push_back(std::make_shared<ImuDataIntegration>(
+      estimating, files_reading_, imu_tags, imu_roles));
+    data_integrations.push_back(std::make_shared<ImageDataIntegration>(
+      estimating, files_reading_, image_tags, image_roles));
+    data_integrations.push_back(std::make_shared<SolutionDataIntegration>(
+      estimating, files_reading_, solution_tags, solution_roles));
     data_integrations_.back() = data_integrations;
   }
 }

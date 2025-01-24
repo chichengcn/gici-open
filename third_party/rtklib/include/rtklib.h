@@ -1500,6 +1500,13 @@ EXPORT int  init_rnxctr (rnxctr_t *rnx);
 EXPORT void free_rnxctr (rnxctr_t *rnx);
 EXPORT int  open_rnxctr (rnxctr_t *rnx, FILE *fp);
 EXPORT int  input_rnxctr(rnxctr_t *rnx, FILE *fp);
+EXPORT int readrnxh(FILE *fp, double *ver, char *type, int *sys, int *tsys,
+                    char tobs[][MAXOBSTYPE][4], nav_t *nav, sta_t *sta);
+EXPORT int readrnxobsb(FILE *fp, const char *opt, double ver, int *tsys,
+                       char tobs[][MAXOBSTYPE][4], int *flag, obsd_t *data,
+                       sta_t *sta);
+EXPORT int readrnxnavb(FILE *fp, const char *opt, double ver, int sys,
+                       int *type, eph_t *eph, geph_t *geph, seph_t *seph);
 
 /* ephemeris and clock functions ---------------------------------------------*/
 EXPORT double eph2clk (gtime_t time, const eph_t  *eph);

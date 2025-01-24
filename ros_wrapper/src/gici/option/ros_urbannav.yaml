@@ -1,0 +1,527 @@
+# Gici board configurations
+stream:
+  streamers:
+  - streamer:
+      tag: str_ros_gnss_rov
+      type: ros
+      topic_name: /gici/gnss_rover
+      io: input
+      format: gnss_raw
+      enable_observation: true
+  - streamer:
+      tag: str_ros_gnss_ref
+      type: ros
+      topic_name: /gici/gnss_reference
+      io: input
+      format: gnss_raw
+      enable_observation: true
+      enable_antenna_position: true
+  - streamer:
+      tag: str_ros_gnss_eph_G
+      type: ros
+      topic_name: /gici/gps_ephemeris
+      io: input
+      format: gnss_raw
+      enable_ephemeris: true
+      enable_ionosphere_parameter: true
+      queue_size: 10
+  - streamer:
+      tag: str_ros_gnss_eph_R
+      type: ros
+      topic_name: /gici/glonass_ephemeris
+      io: input
+      format: gnss_raw
+      enable_ephemeris: true
+      queue_size: 10
+  - streamer:
+      tag: str_ros_gnss_eph_E
+      type: ros
+      topic_name: /gici/galileo_ephemeris
+      io: input
+      format: gnss_raw
+      enable_ephemeris: true
+      queue_size: 10
+  - streamer:
+      tag: str_ros_gnss_eph_C
+      type: ros
+      topic_name: /gici/bds_ephemeris
+      io: input
+      format: gnss_raw
+      enable_ephemeris: true
+      queue_size: 10
+  # - streamer:
+  #     tag: str_ros_imu
+  #     type: ros
+  #     topic_name: /imu/data
+  #     queue_size: 10
+  #     io: input
+  #     format: imu
+  # - streamer:
+  #     tag: str_ros_camera
+  #     type: ros
+  #     topic_name: /zed2/camera/left/image_raw
+  #     queue_size: 10
+  #     io: input
+  #     format: image
+  - streamer:
+      tag: str_solution_file
+      input_tags: [fmt_solution_file]
+      type: file
+      path: /home/cc/Documents/Shared/tmp/solution.txt
+      enable_time_tag: false
+  - streamer:
+      tag: str_solution_file_2
+      input_tags: [fmt_solution_file_2]
+      type: file
+      path: /home/cc/Documents/Shared/tmp/solution_2.txt
+      enable_time_tag: false
+  # - streamer:
+  #     tag: str_solution
+  #     type: ros
+  #     topic_name: solution
+  #     queue_size: 5
+  #     io: output
+  #     format: pose_stamped
+  # - streamer:
+  #     tag: str_solution_odometry
+  #     type: ros
+  #     topic_name: solution_odometry
+  #     queue_size: 10
+  #     io: output
+  #     format: odometry
+  #     subframe_id: Body
+  # - streamer:
+  #     tag: str_solution_path
+  #     type: ros
+  #     topic_name: solution_path
+  #     queue_size: 100
+  #     io: output
+  #     format: path
+  # - streamer:
+  #     tag: str_featured_image
+  #     type: ros
+  #     topic_name: featured_image
+  #     queue_size: 3
+  #     io: output
+  #     format: image
+  # - streamer:
+  #     tag: str_landmarks
+  #     type: ros
+  #     topic_name: landmarks
+  #     queue_size: 3
+  #     marker_scale: 0.3
+  #     io: output
+  #     format: marker
+
+  formators:
+  - formator:
+      io: output
+      tag: fmt_solution_file
+      type: nmea 
+      use_esa: true
+      use_esd: true
+      talker_id: GP
+  - formator:
+      io: output
+      tag: fmt_solution_file_2
+      type: nmea 
+      use_esa: true
+      use_esd: true
+      talker_id: GP
+
+  replay:
+    enable: false
+
+estimate:
+- estimator:
+    tag: est_gnss
+    type: rtk
+    input_tags: [str_ros_gnss_rov, str_ros_gnss_ref, str_ros_gnss_eph_G, str_ros_gnss_eph_R, str_ros_gnss_eph_E, str_ros_gnss_eph_C]
+    str_ros_gnss_rov_roles: [rover]
+    str_ros_gnss_ref_roles: [reference]
+    str_ros_gnss_eph_G_roles: [ephemeris, ion_utc]
+    str_ros_gnss_eph_R_roles: [ephemeris]
+    str_ros_gnss_eph_E_roles: [ephemeris]
+    str_ros_gnss_eph_C_roles: [ephemeris]
+    output_tags: [fmt_solution_file_2]
+    output_align_tag: str_ros_gnss_rov
+    compute_covariance: true
+    rtk_options:
+      max_window_length: 3
+      use_ambiguity_resolution: true
+      estimate_velocity: true
+    gnss_estimator_base_options:
+      min_num_satellite_redundancy: 2
+      use_outlier_rejection: true
+      max_pesudorange_error: 30.0
+      max_phaserange_error: 0.1
+      max_doppler_error: 5.0
+      gnss_error_parameter:
+        code_to_phase_ratio: 1000.0
+        doppler_error_factor: 0.2
+        relative_velocity: [10.0, 10.0, 1.0]
+        relative_frequency: 1.0
+      gnss_common:
+        min_elevation: 7.0
+        min_SNR: [30.0, 25.0]
+    estimator_base_options:
+      max_iteration: 5
+      num_threads: 2
+      max_solver_time: 0.02
+      verbose_output: true
+      solver_type: dense_schur
+      trust_region_strategy_type: dogleg
+    ambiguity_resolution_options:
+      system_exclude: [R]
+      min_percentage_fixation_uwl: 1.0
+      min_percentage_fixation_wl: 0.9
+      min_percentage_fixation_nl: 0.9
+      ratio: 2.0
+
+# - estimator:
+#     tag: est_gnss_imu_lc
+#     type: gnss_imu_lc
+#     input_tags: [str_ros_imu, est_gnss]
+#     str_ros_imu_roles: [major]
+#     est_gnss_roles: [position_and_velocity]
+#     output_tags: [str_solution, str_solution_odometry, str_solution_path, fmt_solution_file]
+#     output_align_tag: est_gnss
+#     output_downsample_rate: 1
+#     gnss_imu_lc_options:
+#       max_window_length: 10
+#     gnss_loose_estimator_base_options:
+#     imu_estimator_base_options:
+#       imu_parameters:
+#         sigma_bg: 1.0e-3
+#         sigma_ba: 1.0e-2
+#         sigma_g_c: 1.027e-02
+#         sigma_a_c: 1.120e-02
+#         sigma_gw_c: 9.136e-05
+#         sigma_aw_c: 1.175e-04
+#       zupt_max_acc_std: 0.45
+#       zupt_max_gyro_std: 0.05
+#       zupt_max_gyro_median: 0.01
+#       zupt_sigma_zero_velocity: 1.0e-2
+#       car_motion: true
+#       body_to_imu_rotation: [0.0, 0.0, 0.0]
+#       body_to_imu_rotation_std: 5.0
+#       car_motion_min_velocity: 3.0
+#       car_motion_max_anguler_velocity: 5.0
+#     estimator_base_options:
+#       max_iteration: 15
+#       num_threads: 4
+#       max_solver_time: 0.3
+#       verbose_output: true
+#       solver_type: sparse_normal_cholesky
+#       trust_region_strategy_type: dogleg
+#     gnss_imu_initializer_options:
+#       max_iteration: 30
+#       num_threads: 4
+#       max_solver_time: 0.5
+#       gnss_extrinsics: [0.0, -0.43, -0.16]
+#       gnss_extrinsics_initial_std: [0.0, 0.0, 0.0]
+#       time_window_length_slow_motion: 0.1
+#       time_window_length_dynamic_motion: 3.0
+#       min_acceleration: 0.5
+
+# - estimator:
+#     tag: est_rtk_imu_tc
+#     type: rtk_imu_tc
+#     input_tags: [str_ros_gnss_rov, str_ros_gnss_ref, str_ros_gnss_eph_G, str_ros_gnss_eph_R, str_ros_gnss_eph_E, str_ros_gnss_eph_C, str_ros_imu]
+#     str_ros_gnss_rov_roles: [rover]
+#     str_ros_gnss_ref_roles: [reference]
+#     str_ros_gnss_eph_G_roles: [ephemeris, ion_utc]
+#     str_ros_gnss_eph_R_roles: [ephemeris]
+#     str_ros_gnss_eph_E_roles: [ephemeris]
+#     str_ros_gnss_eph_C_roles: [ephemeris]
+#     str_ros_imu_roles: [major]
+#     output_tags: [str_solution, str_solution_odometry, str_solution_path, fmt_solution_file]
+#     output_align_tag: str_ros_gnss_rov
+#     output_downsample_rate: 1
+#     rtk_imu_tc_options:
+#       max_window_length: 10
+#     rtk_options:
+#       use_ambiguity_resolution: true
+#     gnss_estimator_base_options:
+#       min_num_satellite_redundancy: 2
+#       use_outlier_rejection: true
+#       max_pesudorange_error: 30.0
+#       max_phaserange_error: 0.1
+#       max_doppler_error: 5.0
+#       gnss_error_parameter:
+#         code_to_phase_ratio: 1000.0
+#         doppler_error_factor: 0.2
+#         relative_frequency: 1.0
+#       gnss_common:
+#         min_elevation: 7.0
+#         min_SNR: [30.0, 25.0]
+#     imu_estimator_base_options:
+#       imu_parameters:
+#         sigma_bg: 1.0e-3
+#         sigma_ba: 1.0e-2
+#         sigma_g_c: 1.027e-02
+#         sigma_a_c: 1.120e-02
+#         sigma_gw_c: 9.136e-05
+#         sigma_aw_c: 1.175e-04
+#       zupt_max_acc_std: 0.45
+#       zupt_max_gyro_std: 0.05
+#       zupt_max_gyro_median: 0.01
+#       zupt_sigma_zero_velocity: 1.0e-2
+#       car_motion: true
+#       body_to_imu_rotation: [0.0, 0.0, 0.0]
+#       body_to_imu_rotation_std: 5.0
+#       car_motion_min_velocity: 3.0
+#       car_motion_max_anguler_velocity: 5.0
+#     estimator_base_options:
+#       max_iteration: 5
+#       num_threads: 4
+#       max_solver_time: 0.05
+#       verbose_output: true
+#       solver_type: dense_schur
+#       trust_region_strategy_type: dogleg
+#     ambiguity_resolution_options:
+#       system_exclude: [R]
+#       min_percentage_fixation_uwl: 1.0
+#       min_percentage_fixation_wl: 0.9
+#       min_percentage_fixation_nl: 0.9
+#       ratio: 3.0
+#     gnss_imu_initializer_options:
+#       max_iteration: 30
+#       num_threads: 4
+#       max_solver_time: 0.5
+#       gnss_extrinsics: [0.0, -0.43, -0.16]
+#       gnss_extrinsics_initial_std: [0.0, 0.0, 0.0]
+#       time_window_length_slow_motion: 0.1
+#       time_window_length_dynamic_motion: 3.0
+#       min_acceleration: 0.5
+
+# - estimator:
+#     tag: est_gnss_imu_camera_srr
+#     type: gnss_imu_camera_srr
+#     input_tags: [str_ros_camera, str_ros_imu, est_gnss]
+#     str_ros_camera_roles: [mono]
+#     str_ros_imu_roles: [major]
+#     est_gnss_roles: [position_and_velocity]
+#     output_tags: [str_solution, str_solution_odometry, str_solution_path, str_featured_image, str_landmarks, fmt_solution_file]
+#     output_align_tag: est_gnss
+#     output_downsample_rate: 1
+#     compute_covariance: false
+#     enable_input_align: false
+#     input_align_latency: 0.2
+#     enable_backend_data_sparsify: true
+#     pending_num_threshold: 5
+#     gnss_imu_camera_srr_options:
+#       max_keyframes: 20
+#       min_yaw_std_init_visual: 0.5
+#     gnss_loose_estimator_base_options:
+#     visual_estimator_base_options:
+#       feature_error_std: 5.0
+#       stable_feature_error_std: 1.0
+#       landmark_outlier_rejection_threshold: 20.0
+#       camera_extrinsics_initial_std: [0.1, 0.1, 0.1, 5.0, 5.0, 5.0]
+#     imu_estimator_base_options:
+#       imu_parameters:
+#         sigma_bg: 1.0e-3
+#         sigma_ba: 1.0e-2
+#         sigma_g_c: 1.027e-02
+#         sigma_a_c: 1.120e-02
+#         sigma_gw_c: 9.136e-05
+#         sigma_aw_c: 1.175e-04
+#       zupt_max_acc_std: 0.45
+#       zupt_max_gyro_std: 0.05
+#       zupt_max_gyro_median: 0.01
+#       zupt_sigma_zero_velocity: 1.0e-2
+#       car_motion: true
+#       body_to_imu_rotation: [0.0, 0.0, 0.0]
+#       body_to_imu_rotation_std: 5.0
+#       car_motion_min_velocity: 3.0
+#       car_motion_max_anguler_velocity: 5.0
+#     estimator_base_options:
+#       max_iteration: 8
+#       num_threads: 4
+#       max_solver_time: 0.04
+#       verbose_output: true
+#       solver_type: dense_schur
+#       trust_region_strategy_type: dogleg
+#     gnss_imu_initializer_options:
+#       max_iteration: 30
+#       num_threads: 4
+#       max_solver_time: 0.5
+#       gnss_extrinsics: [0.0, -0.43, -0.16]
+#       gnss_extrinsics_initial_std: [0.0, 0.0, 0.0]
+#       time_window_length_slow_motion: 0.1
+#       time_window_length_dynamic_motion: 3.0
+#       min_acceleration: 0.5
+#     feature_handler_options:
+#       max_features_per_frame: 100
+#       max_n_kfs: 100000
+#       min_disparity_init_landmark: 10.0
+#       kfselect_min_numkfs: 30
+#       kfselect_min_disparity: 10.0
+#       kfselect_min_dist_metric: 0.5
+#       kfselect_min_angle: 5.0  
+#       kfselect_min_dt: 0.5
+#       detector:
+#         cell_size: 40
+#       initialization:
+#       camera_parameters:
+#         label: "zed2"
+#         cameras:
+#         - camera:
+#             label: cam0
+#             image_width: 672
+#             image_height: 376
+#             type: pinhole
+#             intrinsics:
+#               cols: 1
+#               rows: 4
+#               data: [264.9425, 264.79, 334.3975, 183.162]
+#             distortion:
+#               type: radial-tangential  
+#               parameters:
+#                 cols: 1
+#                 rows: 4
+#                 data: [-0.0442856, 0.0133574, 0.0, 0.0]
+#             mask: /media/cc/T7/ubuntu/datasets/urbannav/mask.png
+#           # Transform of camera in body (IMU) frame
+#           T_B_C:
+#             cols: 4
+#             rows: 4
+#             data: [9.9885234402635936e-01, 1.3591158885981787e-03, 4.7876378696062108e-02, -8.4994249456545504e-02,
+#                    -4.7864188349269129e-02, -7.9091258538426246e-03, 9.9882253939420773e-01, 0.126,
+#                    1.7361758877140372e-03, -9.9996779874765440e-01, -7.8349959194297103e-03, 0.076, 
+#                    0., 0., 0., 1. ]
+
+# - estimator:
+#     tag: est_gnss_imu_camera_rrr
+#     type: rtk_imu_camera_rrr
+#     input_tags: [str_ros_camera, str_ros_gnss_rov, str_ros_gnss_ref, str_ros_gnss_eph_G, str_ros_gnss_eph_R, str_ros_gnss_eph_E, str_ros_gnss_eph_C, str_ros_imu]
+#     str_ros_camera_roles: [mono]
+#     str_ros_gnss_rov_roles: [rover]
+#     str_ros_gnss_ref_roles: [reference]
+#     str_ros_gnss_eph_G_roles: [ephemeris, ion_utc]
+#     str_ros_gnss_eph_R_roles: [ephemeris]
+#     str_ros_gnss_eph_E_roles: [ephemeris]
+#     str_ros_gnss_eph_C_roles: [ephemeris]
+#     str_ros_imu_roles: [major]
+#     output_tags: [str_solution, str_solution_odometry, str_solution_path, str_featured_image, str_landmarks, fmt_solution_file]
+#     output_align_tag: str_ros_gnss_rov
+#     output_downsample_rate: 1
+#     compute_covariance: false
+#     enable_input_align: false
+#     input_align_latency: 0.2
+#     enable_backend_data_sparsify: true
+#     pending_num_threshold: 5
+#     rtk_imu_camera_rrr_options:
+#       max_keyframes: 20
+#       min_yaw_std_init_visual: 0.5
+#     rtk_options:
+#       use_ambiguity_resolution: true
+#     gnss_estimator_base_options:
+#       min_num_satellite_redundancy: 2
+#       use_outlier_rejection: true
+#       max_pesudorange_error: 30.0
+#       max_phaserange_error: 0.1
+#       max_doppler_error: 5.0
+#       gnss_error_parameter:
+#         code_to_phase_ratio: 1000.0
+#         doppler_error_factor: 0.2
+#         relative_velocity: [10.0, 10.0, 1.0]
+#         relative_frequency: 1.0
+#       gnss_common:
+#         min_elevation: 7.0
+#         min_SNR: [30.0, 25.0]
+#     gnss_loose_estimator_base_options:
+#     visual_estimator_base_options:
+#       feature_error_std: 5.0
+#       stable_feature_error_std: 1.0
+#       landmark_outlier_rejection_threshold: 20.0
+#       camera_extrinsics_initial_std: [0.1, 0.1, 0.1, 5.0, 5.0, 5.0]
+#     imu_estimator_base_options:
+#       imu_parameters:
+#         sigma_bg: 1.0e-3
+#         sigma_ba: 1.0e-2
+#         sigma_g_c: 1.027e-02
+#         sigma_a_c: 1.120e-02
+#         sigma_gw_c: 9.136e-05
+#         sigma_aw_c: 1.175e-04
+#       zupt_max_acc_std: 0.45
+#       zupt_max_gyro_std: 0.05
+#       zupt_max_gyro_median: 0.01
+#       zupt_sigma_zero_velocity: 1.0e-2
+#       car_motion: true
+#       body_to_imu_rotation: [0.0, 0.0, 0.0]
+#       body_to_imu_rotation_std: 5.0
+#       car_motion_min_velocity: 3.0
+#       car_motion_max_anguler_velocity: 5.0
+#     estimator_base_options:
+#       max_iteration: 8
+#       num_threads: 4
+#       max_solver_time: 0.04
+#       verbose_output: true
+#       solver_type: dense_schur
+#       trust_region_strategy_type: dogleg
+#     ambiguity_resolution_options:
+#       system_exclude: [R]
+#       min_percentage_fixation_uwl: 1.0
+#       min_percentage_fixation_wl: 0.9
+#       min_percentage_fixation_nl: 0.9
+#       ratio: 2.0
+#     gnss_imu_initializer_options:
+#       max_iteration: 30
+#       num_threads: 4
+#       max_solver_time: 0.5
+#       gnss_extrinsics: [0.0, -0.43, -0.16]
+#       gnss_extrinsics_initial_std: [0.0, 0.0, 0.0]
+#       time_window_length_slow_motion: 0.1
+#       time_window_length_dynamic_motion: 3.0
+#       min_acceleration: 0.5
+#     feature_handler_options:
+#       max_features_per_frame: 100
+#       max_n_kfs: 100000
+#       min_disparity_init_landmark: 10.0
+#       min_translation_init_landmark: 0.5
+#       kfselect_min_numkfs: 30
+#       kfselect_min_disparity: 10.0
+#       kfselect_min_dist_metric: 0.5
+#       kfselect_min_angle: 5.0  
+#       kfselect_min_dt: 0.5
+#       detector:
+#         cell_size: 40
+#       initialization:
+#       camera_parameters:
+#         label: "zed2"
+#         cameras:
+#         - camera:
+#             label: cam0
+#             image_width: 672
+#             image_height: 376
+#             type: pinhole
+#             intrinsics:
+#               cols: 1
+#               rows: 4
+#               data: [264.9425, 264.79, 334.3975, 183.162]
+#             distortion:
+#               type: radial-tangential  
+#               parameters:
+#                 cols: 1
+#                 rows: 4
+#                 data: [-0.0442856, 0.0133574, 0.0, 0.0]
+#             mask: /media/cc/T7/ubuntu/datasets/urbannav/mask.png
+#           # Transform of camera in body (IMU) frame
+#           T_B_C:
+#             cols: 4
+#             rows: 4
+#             data: [9.9885234402635936e-01, 1.3591158885981787e-03, 4.7876378696062108e-02, -8.4994249456545504e-02,
+#                    -4.7864188349269129e-02, -7.9091258538426246e-03, 9.9882253939420773e-01, 0.126,
+#                    1.7361758877140372e-03, -9.9996779874765440e-01, -7.8349959194297103e-03, 0.076, 
+#                    0., 0., 0., 1. ]
+
+
+logging:
+  enable: true
+  min_log_level: 0
+  log_to_stderr: true
+  file_directory: /home/cc/Work/Data/Log
+
+# rosbag play *.bag --topics /gici/gnss_rover /gici/gnss_reference /gici/gps_ephemeris 

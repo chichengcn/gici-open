@@ -1762,10 +1762,6 @@ static int decode_ssr4(rtcm_t *rtcm, int sys, int subtype)
         rtcm->ssr[sat-1].iode=iode;
         rtcm->ssr[sat-1].iodcrc=iodcrc;
         rtcm->ssr[sat-1].refd=refd;
-
-        if (sys == SYS_CMP) {
-            int a = 0;
-        }
         
         for (k=0;k<3;k++) {
             rtcm->ssr[sat-1].deph [k]=deph [k];
