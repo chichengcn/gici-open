@@ -279,6 +279,7 @@ void GnssDataIntegration::handleGNSS(const std::string& formator_tag,
       num_valid_ephemeris++;
     }
     else {
+      LOG(INFO) << "Unable to get valid satellite ephemeris for " << satellite.prn;
       num_invalid_ephemeris++; continue;
     }
 
