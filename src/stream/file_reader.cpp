@@ -64,15 +64,6 @@ FileReaderBase::FileReaderBase(const YAML::Node& node) :
     fclose(fd_); fd_ = NULL;
     LOG(FATAL) << __FUNCTION__ << ": Buffer malloc error!";
   }
-
-  // Load first package to get initial timestamp 
-  if (!load()) {
-    fclose(fd_); fd_ = NULL;
-    LOG(ERROR) << "Unable to load first package for file " << tag_;
-    return;
-  }
-  CHECK(data_buf_.size() > 0);
-  initial_timestamp_ = data_buf_.front().first;
 }
 
 FileReaderBase::~FileReaderBase()
@@ -101,6 +92,21 @@ bool FileReaderBase::get(
   else return false;
 
   return true;
+}
+
+// Get initial timestamp
+double FileReaderBase::getInitialTimestamp()
+{
+  if (initial_timestamp_ != 0.0) return initial_timestamp_;
+
+  // Load first package to get initial timestamp 
+  if (!load()) {
+    fclose(fd_); fd_ = NULL;
+    LOG(ERROR) << "Unable to load first package for file " << tag_;
+    return 0.0;
+  }
+  CHECK(data_buf_.size() > 0);
+  return data_buf_.front().first;
 }
 
 // Load at least one data from file
@@ -182,7 +188,35 @@ bool FileReaderBase::formatTypeValid(const std::string type)
           type == "image-v4l2" || type == "image-pack" || 
           type == "imu-pack" || type == "option" || 
           type == "nmea" || type == "dcb-file" || 
-          type == "atx-file");
+          type == "atx-file" || type == "imu-text");
+}
+
+// IMU text --------------------------------------------------
+bool ImuTextReader::load()
+{
+  bool has_new_data = false;
+  while (!feof(fd_))
+  {
+    if (fgets((char *)buf_, max_buf_size, fd_) == NULL) break; 
+
+    // Check if header 
+    if (strstr((char *)buf_, "Timestamp") != NULL) continue;
+
+    // Decode data
+    std::shared_ptr<DataCluster> data = 
+      std::make_shared<DataCluster>(FormatorType::IMUText);
+    auto& imu = data->imu;
+    sscanf((char *)buf_, "%lf %lf %lf %lf %lf %lf %lf\n", 
+      &imu->time, &imu->acceleration[0], &imu->acceleration[1], &imu->acceleration[2],
+      &imu->angular_velocity[0], &imu->angular_velocity[1], &imu->angular_velocity[2]);
+    double timestamp = burst_load_ ? 0.0 : getTimestamp(data);
+    data_buf_.push_back(std::make_pair(timestamp, data));
+    has_new_data = true;
+
+    if (has_new_data) break;
+  }
+
+  return !feof(fd_);
 }
 
 // -------------------------------------------------------------
@@ -190,7 +224,7 @@ bool FileReaderBase::formatTypeValid(const std::string type)
 #define MAP_FILE_READER(Type, Reader) \
   if (type == Type) { return std::make_shared<Reader>(node); }
 #define LOG_UNSUPPORT LOG(FATAL) << "FileReader type not supported!";
-inline static FileReaderType loadType(const YAML::Node& node)
+inline static FormatorType loadType(const YAML::Node& node)
 {
   if (!node["type"].IsDefined()) {
     LOG(FATAL) << "Unable to load formator type!";
@@ -200,23 +234,24 @@ inline static FileReaderType loadType(const YAML::Node& node)
     LOG(FATAL) << "Format for post-file " << node["tag"] << " undefined!";
   }
   std::string type_str = format_node["type"].as<std::string>();
-  FileReaderType type;
+  FormatorType type;
   option_tools::convert(type_str, type);
   return type;
 }
 std::shared_ptr<FileReaderBase> makeFileReader(const YAML::Node& node)
 {
-  FileReaderType type = loadType(node);
-  MAP_FILE_READER(FileReaderType::RTCM2, RTCM2Reader);
-  MAP_FILE_READER(FileReaderType::RTCM3, RTCM3Reader);
-  MAP_FILE_READER(FileReaderType::GnssRaw, GnssRawReader);
-  MAP_FILE_READER(FileReaderType::RINEX, RINEXReader);
-  MAP_FILE_READER(FileReaderType::ImagePack, ImagePackReader);
-  MAP_FILE_READER(FileReaderType::IMUPack, IMUPackReader);
-  MAP_FILE_READER(FileReaderType::NMEA, NmeaReader);
-  MAP_FILE_READER(FileReaderType::DcbFile, DcbFileReader);
-  MAP_FILE_READER(FileReaderType::AtxFile, AtxFileReader);
-  LOG_UNSUPPORT;
+  FormatorType type = loadType(node);
+  MAP_FILE_READER(FormatorType::RTCM2, RTCM2Reader);
+  MAP_FILE_READER(FormatorType::RTCM3, RTCM3Reader);
+  MAP_FILE_READER(FormatorType::GnssRaw, GnssRawReader);
+  MAP_FILE_READER(FormatorType::RINEX, RINEXReader);
+  MAP_FILE_READER(FormatorType::ImagePack, ImagePackReader);
+  MAP_FILE_READER(FormatorType::IMUPack, IMUPackReader);
+  MAP_FILE_READER(FormatorType::NMEA, NmeaReader);
+  MAP_FILE_READER(FormatorType::DcbFile, DcbFileReader);
+  MAP_FILE_READER(FormatorType::AtxFile, AtxFileReader);
+  MAP_FILE_READER(FormatorType::IMUText, ImuTextReader);
+  // LOG_UNSUPPORT;
   return nullptr;
 }
 

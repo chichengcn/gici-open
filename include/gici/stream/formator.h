@@ -33,7 +33,8 @@ enum class FormatorType {
   OptionPack, 
   NMEA,
   DcbFile,
-  AtxFile
+  AtxFile,
+  IMUText
 };
 
 // GNSS data types

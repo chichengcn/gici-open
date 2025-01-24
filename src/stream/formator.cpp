@@ -26,7 +26,7 @@ DataCluster::DataCluster(FormatorType type)
     gnss->init();
     return;
   }
-  if (type == FormatorType::IMUPack) {
+  if (type == FormatorType::IMUPack || type == FormatorType::IMUText) {
     imu = std::make_shared<IMU>();
     return;
   }
@@ -1513,7 +1513,7 @@ std::shared_ptr<FormatorBase> makeFormator(const YAML::Node& node)
   MAP_FORMATOR(FormatorType::NMEA, NmeaFormator);
   MAP_FORMATOR(FormatorType::DcbFile, DcbFileFormator);
   MAP_FORMATOR(FormatorType::AtxFile, AtxFileFormator);
-  LOG_UNSUPPORT;
+  // LOG_UNSUPPORT;
   return nullptr;
 }
 

@@ -14,19 +14,6 @@
 
 namespace gici {
 
-// File reader types
-enum class FileReaderType {
-  RTCM2, 
-  RTCM3,
-  GnssRaw, 
-  RINEX, 
-  ImagePack,  
-  IMUPack,
-  NMEA,
-  DcbFile,
-  AtxFile
-};
-
 // Base class for file reader
 class FileReaderBase {
 public:
@@ -48,7 +35,7 @@ public:
   std::string getTag() { return tag_; }
 
   // Get initial timestamp
-  double getInitialTimestamp() { return initial_timestamp_; }
+  double getInitialTimestamp();
 
   // Get valid status
   bool valid() { return (fd_ != NULL); }
@@ -69,7 +56,7 @@ protected:
 protected:
   // Load control
   std::string tag_;
-  FileReaderType type_;
+  FormatorType type_;
   std::shared_ptr<FormatorBase> formator_;
   FILE *fd_;
   const size_t max_buf_size = 32768;
@@ -95,6 +82,20 @@ using IMUPackReader = FileReaderBase;
 using NmeaReader = FileReaderBase;
 using DcbFileReader = FileReaderBase;
 using AtxFileReader = FileReaderBase;
+
+// Readers that has no formators defined (not suitable for real-time stream)
+
+// IMU text reader
+class ImuTextReader : public FileReaderBase {
+public:
+  ImuTextReader(const YAML::Node& node) : 
+    FileReaderBase(node) { }
+  ~ImuTextReader() { }
+
+protected:
+  // Load at least one data from file
+  bool load() override;
+};
 
 // Get file reader handle from yaml
 std::shared_ptr<FileReaderBase> makeFileReader(const YAML::Node& node);
