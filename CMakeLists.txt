@@ -37,7 +37,7 @@ add_subdirectory(third_party/rtklib)
 include_directories(
   ${EIGEN3_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
-  include
+  include 
 )
 
 aux_source_directory(src/utility DIR_utility)
