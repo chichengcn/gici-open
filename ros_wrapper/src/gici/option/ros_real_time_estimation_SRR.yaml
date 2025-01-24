@@ -135,8 +135,8 @@ estimate:
       gnss_common:
         min_elevation: 12.0        
         min_SNR: [35.0, 30.0]
-        system_exclude: [R, E, C]
-        code_exclude: [G|5Q]
+        # system_exclude: [R, E, C]
+        # code_exclude: [G|5Q]
         mw_slip_thres: 0.5
         gf_slip_thres: 0.05
         gf_sd_slip_thres: 0.05
