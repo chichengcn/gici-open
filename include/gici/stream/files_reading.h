@@ -71,7 +71,7 @@ private:
 	// Thread handles
 	std::unique_ptr<std::thread> thread_;
 	bool quit_thread_ = false;
-  double step_ = 1.0;  // time duration for each loading
+  double step_ = 0.1;  // time duration for each loading
   double start_offset_ = 0.0;
 
   // Stream control
