@@ -94,7 +94,7 @@ NodeOptionHandle::NodeOptionHandle(const YAML::Node& yaml_node) :
     if (nodes[i]->input_tags.size() == 0 && nodes[i]->output_tags.size() == 0) {
       LOG(ERROR) << nodes[i]->tag << ": " 
         << "At least one input tag or output tag should be specified!";
-      valid = false; return;
+      // valid = false; return;
     }
 
     int n_out_fmts = 0, n_out_strs = 0, n_out_ests = 0;
