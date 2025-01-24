@@ -2,6 +2,11 @@
 
 ## GNSS/INS/Camera Integrated Navigation Library
 
+<div style="text-align: center;">
+  <img src="https://github.com/chichengcn/gici-open-dataset/blob/master/figures/gici_structure.png" 
+  alt="structure" height="330" border="10" />
+</div>
+
 GNSS/INS/Camera Integrated Navigation Library (GICI-LIB) is an open-source software package for Global Navigation Satellite System (GNSS), Inertial Navigation System (INS), and Camera integrated navigation. The features of GICI-LIB are:
 
 a) It is built under the Factor Graph Optimization (FGO) framework. It contains most of the possible GNSS loose and tight integration factors, INS factors, visual factors, and motion constraints, together with reliable initialization, measurement sparsification, and outlier rejection algorithms. The GNSS formulations are implemented towards four constellations and full frequencies.
