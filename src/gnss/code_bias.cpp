@@ -491,7 +491,10 @@ void CodeBias::arrangeAllSourceDcbs(
         biases.insert(
           std::make_pair(prn, std::unordered_map<int, double>()));
       }
-      biases.at(prn).insert(std::make_pair(codes[i], x(i)));
+      if (biases.at(prn).find(codes[i]) == biases.at(prn).end()) {
+        biases.at(prn).insert(std::make_pair(codes[i], x(i)));
+      }
+      biases.at(prn).at(codes[i]) = x(i);
     }
   }
 }
