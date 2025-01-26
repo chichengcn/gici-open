@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(gici_messages)
+project(gici_ros)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp 
