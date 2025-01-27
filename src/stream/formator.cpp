@@ -21,7 +21,8 @@ DataCluster::DataCluster(FormatorType type)
 {
   if (type == FormatorType::RTCM2 || type == FormatorType::RTCM3 ||
     type == FormatorType::GnssRaw || type == FormatorType::RINEX ||
-    type == FormatorType::DcbFile || type == FormatorType::AtxFile) {
+    type == FormatorType::DcbFile || type == FormatorType::AtxFile || 
+    type == FormatorType::Sp3File || type == FormatorType::ClkFile) {
     gnss = std::make_shared<GNSS>();
     gnss->init();
     return;

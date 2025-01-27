@@ -30,11 +30,13 @@ enum class FormatorType {
   ImageV4L2,
   ImagePack,  
   IMUPack,
+  IMUText,
   OptionPack, 
   NMEA,
   DcbFile,
-  AtxFile,
-  IMUText
+  AtxFile, 
+  Sp3File,
+  ClkFile
 };
 
 // GNSS data types
@@ -45,7 +47,9 @@ enum class GnssDataType {
   AntePos = 5,  // Antenna position
   IonAndUtcPara = 9,  // Ionosphere and UTC parameters
   SSR = 10,
-  PhaseCenter   // PCVs and PCOs
+  PhaseCenter,   // PCVs and PCOs
+  PreciseOrbit,  // From SP3
+  PreciseClock,  // From CLK
 };
 
 // Data 

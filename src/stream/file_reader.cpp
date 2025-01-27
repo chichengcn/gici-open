@@ -55,12 +55,17 @@ FileReaderBase::FileReaderBase(const YAML::Node& node) :
       LOG(ERROR) << "Unable to open file " << path << "!";
       return;
     }
+    path_ = path;
+    option_tools::convert(format_type_str, type_);
   }
-  else fd_ = NULL;
+  else {
+    LOG(ERROR) << "Invalid format type: " << format_type_str;
+    fd_ = NULL; return;
+  }
 
   // Initialize buffer
-  if (!(buf_ = (uint8_t *)malloc(sizeof(uint8_t) * max_buf_size))) {
-    free(buf_); 
+  if (!(buf_ = (uint8_t *)malloc(sizeof(uint8_t) * max_buf_size_))) {
+    free(buf_);
     fclose(fd_); fd_ = NULL;
     LOG(FATAL) << __FUNCTION__ << ": Buffer malloc error!";
   }
@@ -117,7 +122,7 @@ bool FileReaderBase::load()
   bool has_new_data = false;
   while (!feof(fd_))
   {
-    size_t nread = fread(buf_, 1, max_buf_size, fd_);
+    size_t nread = fread(buf_, 1, max_buf_size_, fd_);
 
     // Decode data
     std::vector<std::shared_ptr<DataCluster>> dataset;
@@ -132,7 +137,7 @@ bool FileReaderBase::load()
     if (has_new_data) break;
   }
 
-  return !feof(fd_);
+  return has_new_data;
 }
 
 // Get timestamp for a DataCluster (latency added)
@@ -188,7 +193,8 @@ bool FileReaderBase::formatTypeValid(const std::string type)
           type == "image-v4l2" || type == "image-pack" || 
           type == "imu-pack" || type == "option" || 
           type == "nmea" || type == "dcb-file" || 
-          type == "atx-file" || type == "imu-text");
+          type == "atx-file" || type == "imu-text" || 
+          type == "sp3-file" || type == "clk-file");
 }
 
 // IMU text --------------------------------------------------
@@ -197,7 +203,7 @@ bool ImuTextReader::load()
   bool has_new_data = false;
   while (!feof(fd_))
   {
-    if (fgets((char *)buf_, max_buf_size, fd_) == NULL) break; 
+    if (fgets((char *)buf_, max_buf_size_, fd_) == NULL) break; 
 
     // Check if header 
     if (strstr((char *)buf_, "Timestamp") != NULL) continue;
@@ -216,7 +222,51 @@ bool ImuTextReader::load()
     if (has_new_data) break;
   }
 
-  return !feof(fd_);
+  return has_new_data;
+}
+
+// SP3 file --------------------------------------------------
+bool Sp3FileReader::load()
+{
+  if (!burst_load_) {
+    LOG(WARNING) << "SP3 file reader does not support non-burst load!";
+  }
+  if (loaded_) return false;
+
+  std::shared_ptr<DataCluster> data = 
+    std::make_shared<DataCluster>(FormatorType::Sp3File);
+  nav_t *nav = data->gnss->ephemeris;
+  nav->ne=nav->nemax=0;
+  nav->nc=nav->ncmax=0;
+  fclose(fd_); fd_ = NULL;
+  readsp3(path_.data(), nav, 0);
+  data->gnss->types.push_back(GnssDataType::PreciseOrbit);
+  data_buf_.push_back(std::make_pair(0.0, data));
+  loaded_ = true;
+
+  return true;
+}
+
+// CLK file --------------------------------------------------
+bool ClkFileReader::load()
+{
+  if (!burst_load_) {
+    LOG(WARNING) << "CLK file reader does not support non-burst load!";
+  }
+  if (loaded_) return false;
+
+  std::shared_ptr<DataCluster> data = 
+    std::make_shared<DataCluster>(FormatorType::ClkFile);
+  nav_t *nav = data->gnss->ephemeris;
+  nav->ne=nav->nemax=0;
+  nav->nc=nav->ncmax=0;
+  fclose(fd_); fd_ = NULL;
+  readrnxc(path_.data(), nav);
+  data->gnss->types.push_back(GnssDataType::PreciseClock);
+  data_buf_.push_back(std::make_pair(0.0, data));
+  loaded_ = true;
+
+  return true;
 }
 
 // -------------------------------------------------------------
@@ -251,6 +301,8 @@ std::shared_ptr<FileReaderBase> makeFileReader(const YAML::Node& node)
   MAP_FILE_READER(FormatorType::DcbFile, DcbFileReader);
   MAP_FILE_READER(FormatorType::AtxFile, AtxFileReader);
   MAP_FILE_READER(FormatorType::IMUText, ImuTextReader);
+  MAP_FILE_READER(FormatorType::Sp3File, Sp3FileReader);
+  MAP_FILE_READER(FormatorType::ClkFile, ClkFileReader);
   // LOG_UNSUPPORT;
   return nullptr;
 }

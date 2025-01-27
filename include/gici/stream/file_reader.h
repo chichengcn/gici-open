@@ -41,7 +41,7 @@ public:
   bool valid() { return (fd_ != NULL); }
 
   // Check if reached the end of file
-  bool done() { return feof(fd_); }
+  bool done() { return fd_ == NULL || feof(fd_); }
 
 protected:
   // Load at least one data from file
@@ -58,8 +58,9 @@ protected:
   std::string tag_;
   FormatorType type_;
   std::shared_ptr<FormatorBase> formator_;
+  std::string path_;
   FILE *fd_;
-  const size_t max_buf_size = 32768;
+  size_t max_buf_size_ = 32768;
   uint8_t *buf_;
 
   // Store loaded data
@@ -93,8 +94,33 @@ public:
   ~ImuTextReader() { }
 
 protected:
-  // Load at least one data from file
   bool load() override;
+};
+
+// SP3 file reader
+class Sp3FileReader : public FileReaderBase {
+public:
+  Sp3FileReader(const YAML::Node& node) : 
+    FileReaderBase(node) { }
+  ~Sp3FileReader() { }
+
+protected:
+  bool load() override;
+
+  bool loaded_ = false;
+};
+
+// CLK file reader
+class ClkFileReader : public FileReaderBase {
+public:
+  ClkFileReader(const YAML::Node& node) : 
+    FileReaderBase(node) { }
+  ~ClkFileReader() { }
+
+protected:
+  bool load() override;
+
+  bool loaded_ = false;
 };
 
 // Get file reader handle from yaml
