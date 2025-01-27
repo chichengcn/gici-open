@@ -656,10 +656,10 @@ extern int readrnxh(FILE *fp, double *ver, char *type, int *sys, int *tsys,
         }
         else if (strstr(label,"RINEX VERSION / TYPE")) {
             *ver=str2num(buff,0,9);
-            *type=*(buff+20);
+            *type=*(buff+20)==' '?*(buff+21):*(buff+20);
             
             /* satellite system */
-            switch (*(buff+40)) {
+            switch (*(buff+40)==' '?*(buff+42):*(buff+40)) {
                 case ' ':
                 case 'G': *sys=SYS_GPS;  *tsys=TSYS_GPS; break;
                 case 'R': *sys=SYS_GLO;  *tsys=TSYS_UTC; break;
@@ -1450,7 +1450,7 @@ static int readrnxclk(FILE *fp, const char *opt, int index, nav_t *nav)
     
     while (fgets(buff,sizeof(buff),fp)) {
         
-        if (str2time(buff,8,26,&time)) {
+        if (str2time(buff,13,26,&time)) {
             trace(2,"rinex clk invalid epoch: %34.34s\n",buff);
             continue;
         }
@@ -1461,7 +1461,7 @@ static int readrnxclk(FILE *fp, const char *opt, int index, nav_t *nav)
         
         if (!(satsys(sat,NULL)&mask)) continue;
         
-        for (i=0,j=40;i<2;i++,j+=20) data[i]=str2num(buff,j,19);
+        for (i=0,j=45;i<2;i++,j+=20) data[i]=str2num(buff,j,19);
         
         if (nav->nc>=nav->ncmax) {
             nav->ncmax+=1024;
