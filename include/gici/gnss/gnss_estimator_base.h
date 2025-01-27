@@ -670,7 +670,7 @@ protected:
       else return true;
     }
     if (!gnss_common::checkObservationValid(measurement, index, 
-        ObservationType::Pseudorange, gnss_base_options_.common)) {
+        ObservationType::Pseudorange, gnss_base_options_.common, is_ppp_)) {
       return false;
     }
     if (is_use_phase_ && 
@@ -678,7 +678,8 @@ protected:
         ObservationType::Phaserange, gnss_base_options_.common, is_ppp_)) {
       return false;
     }
-    if (is_ppp_ && gnss_common::isBds1(index.prn)) {
+    if (is_ppp_ && 
+        (gnss_common::isBds1(index.prn) || gnss_common::isBds2(index.prn))) {
       return false;
     }
     return true;

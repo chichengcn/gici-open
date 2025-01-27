@@ -34,6 +34,7 @@ PppEstimator::PppEstimator(const PppEstimatorOptions& options,
   SppEstimatorOptions spp_options;
   spp_options.use_dual_frequency = true;
   spp_estimator_.reset(new SppEstimator(spp_options, gnss_base_options));
+  spp_estimator_->setPPPMode();
 
   // Phase wind-up control
   phase_windup_.reset(new PhaseWindup());
