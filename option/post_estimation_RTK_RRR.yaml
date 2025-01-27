@@ -55,43 +55,43 @@ stream:
       path: <output-directory>/solution.txt
       enable_time_tag: false
 
-  - streamer:
-      tag: str_solution
-      type: ros
-      topic_name: solution
-      queue_size: 5
-      io: output
-      format: pose_stamped
-  - streamer:
-      tag: str_solution_odometry
-      type: ros
-      topic_name: solution_odometry
-      queue_size: 10
-      io: output
-      format: odometry
-      subframe_id: Body
-  - streamer:
-      tag: str_solution_path
-      type: ros
-      topic_name: solution_path
-      queue_size: 100
-      io: output
-      format: path
-  - streamer:
-      tag: str_featured_image
-      type: ros
-      topic_name: featured_image
-      queue_size: 3
-      io: output
-      format: image
-  - streamer:
-      tag: str_landmarks
-      type: ros
-      topic_name: landmarks
-      queue_size: 3
-      marker_scale: 0.3
-      io: output
-      format: marker
+  # - streamer:
+  #     tag: str_solution
+  #     type: ros
+  #     topic_name: solution
+  #     queue_size: 5
+  #     io: output
+  #     format: pose_stamped
+  # - streamer:
+  #     tag: str_solution_odometry
+  #     type: ros
+  #     topic_name: solution_odometry
+  #     queue_size: 10
+  #     io: output
+  #     format: odometry
+  #     subframe_id: Body
+  # - streamer:
+  #     tag: str_solution_path
+  #     type: ros
+  #     topic_name: solution_path
+  #     queue_size: 100
+  #     io: output
+  #     format: path
+  # - streamer:
+  #     tag: str_featured_image
+  #     type: ros
+  #     topic_name: featured_image
+  #     queue_size: 3
+  #     io: output
+  #     format: image
+  # - streamer:
+  #     tag: str_landmarks
+  #     type: ros
+  #     topic_name: landmarks
+  #     queue_size: 3
+  #     marker_scale: 0.3
+  #     io: output
+  #     format: marker
 
   formators:
   - formator:
