@@ -191,11 +191,14 @@ void GnssDataIntegration::handleGNSS(const std::string& formator_tag,
 
     if (it == GnssDataType::IonAndUtcPara) {
       bool found = false;
+      static bool flag = false;
       for (auto it_role : roles) {
-        if (it_role == GnssRole::IonAndUtc) 
+        //if (it_role == GnssRole::IonAndUtc)
+        if (it_role == GnssRole::Ephemeris)
         { found = true; break; }
       }
       if (!found) continue;
+      if (flag) continue;
       gnss_common::updateIonAndUTC(gnss->ephemeris, gnss_local_);
     }
 
