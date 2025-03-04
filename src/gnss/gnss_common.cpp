@@ -297,6 +297,8 @@ void rearrangePhasesAndCodes(GnssMeasurement& measurement, bool accept_coarse)
       std::pair<int, Observation> arranged_observation;
       int code = it->first;
       Observation observation = it->second;
+      // exclude observations that only have pseudorange for ppp and rtk
+      if (observation.phaserange==0.0) continue;
       int phase_id = getPhaseID(system, code);
       int default_code = 0;
 #define MAP(S, P, C) \
