@@ -641,7 +641,10 @@ int RINEXFormator::decode(const uint8_t *buf, int size,
           rnx_.ephsat = geph.sat;
           rnx_.ephset = 0;
         }
-        else { /* other ephemeris */
+        else if (type == 2) { /* SBAS ephemeris, not supported, discard it */
+          valid = false;
+        }
+        else { /* GPS/Galileo/QZSS/BeiDou/IRNSS ephemeris */
           sys = satsys(eph.sat, &prn);
           if (sys == SYS_GAL) {
             int sel = getseleph(sys);
@@ -654,14 +657,7 @@ int RINEXFormator::decode(const uint8_t *buf, int size,
             rnx_.ephsat = eph.sat;
             rnx_.ephset = 0;
           }
-          else {
-            // clear memory and continue
-            memset(buf_memory_, 0x00, p_memory_ - buf_memory_);
-            p_memory_ = buf_memory_;
-            continue;
-          }
         }
-
         if (valid)
         {
           int ret = static_cast<int>(GnssDataType::Ephemeris);
